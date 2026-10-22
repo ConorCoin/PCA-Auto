@@ -1,0 +1,9 @@
+{
+  "name": "PCA Field Capture",
+  "short_name": "PCA",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0b5d3b",
+  "icons": []
+}

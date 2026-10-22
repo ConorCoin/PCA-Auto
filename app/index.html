@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PCA Field Capture</title>
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 16px; }
+  button, label.btn { display: block; width: 100%; padding: 16px; margin: 8px 0; font-size: 18px;
+    background: #0b5d3b; color: #fff; border: 0; border-radius: 8px; text-align: center; }
+  #notes div { border-bottom: 1px solid #ddd; padding: 8px 0; }
+  img { max-width: 100%; border-radius: 6px; }
+</style>
+</head>
+<body>
+<h1>PCA Capture</h1>
+<label class="btn">Take photo
+  <input id="photo" type="file" accept="image/*" capture="environment" hidden>
+</label>
+<button id="voice">Dictate note</button>
+<div id="notes"></div>
+<script>
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+const notes = document.getElementById("notes");
+document.getElementById("photo").onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const d = document.createElement("div"), i = document.createElement("img");
+  i.src = URL.createObjectURL(f); d.appendChild(i); notes.prepend(d);
+};
+document.getElementById("voice").onclick = () => {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return alert("Speech recognition not supported in this browser");
+  const r = new SR(); r.lang = "en-US";
+  r.onresult = ev => { const d = document.createElement("div"); d.textContent = ev.results[0][0].transcript; notes.prepend(d); };
+  r.start();
+};
+</script>
+</body>
+</html>
