@@ -21,6 +21,9 @@
   button, .btn { padding: 14px; background: var(--g); color: #fff; border: 0; border-radius: 10px; text-align: center; cursor: pointer; }
   button.alt, .btn.alt { background: var(--lg); color: var(--g); }
   button.small { padding: 6px 10px; font-size: 14px; border-radius: 6px; }
+  button.chip { flex: 1; padding: 10px 4px; font-size: 15px; background: var(--lg); color: var(--g); border: 2px solid var(--g); }
+  button.chip.on { background: var(--g); color: #fff; }
+  #text { margin-top: 8px; }
   button:disabled { opacity: .5; }
   #section { flex: 1; min-width: 0; padding: 12px 8px; font-size: 17px; font-weight: 600; border: 2px solid var(--g); border-radius: 10px; background: #fff; }
   #prev, #next { width: 52px; padding: 12px 0; font-size: 22px; }
@@ -39,7 +42,7 @@
   .tools { display: flex; gap: 6px; margin-top: 6px; }
   .tools select { flex: 1; min-width: 0; font-size: 14px; padding: 4px; }
   #setup { padding: 12px; }
-  #setup input[type=text] { width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid #bbb; border-radius: 8px; }
+  #setup input[type=text] { width: 100%; box-sizing: border-box; padding: 12px; margin-bottom: 8px; border: 1px solid #bbb; border-radius: 8px; }
   #setup button.job { width: 100%; margin-bottom: 6px; text-align: left; }
   .foot { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 14px; }
   .block { display: block; width: 100%; margin: 6px 0; }
@@ -61,7 +64,10 @@
 
 <div id="setup" hidden>
   <div id="joblist"></div>
-  <input id="jobname" type="text" placeholder="New property name">
+  <div class="hint">New assessment. The name and address print under every photo.</div>
+  <input id="jobname" type="text" placeholder="Property name (e.g. Porsche Atlanta Northwest)">
+  <input id="jobaddr1" type="text" placeholder="Street address (e.g. 2501 Windy Hill Road SE)">
+  <input id="jobaddr2" type="text" placeholder="City, State Zip (e.g. Marietta, GA 30067)">
   <button id="startjob" class="block">Start new assessment</button>
 </div>
 
@@ -73,6 +79,17 @@
     <button id="note" class="alt big">Note</button>
   </div>
   <div id="notebox" hidden>
+    <div class="hint">This note is the:</div>
+    <div class="row" id="types">
+      <button class="chip small" data-type="description">Description</button>
+      <button class="chip small" data-type="condition">Condition</button>
+      <button class="chip small" data-type="rec">Recommendation</button>
+    </div>
+    <div class="row" id="tiers" style="margin-top:6px" hidden>
+      <button class="chip small" data-tier="immediate">Immediate</button>
+      <button class="chip small" data-tier="short">Short-Term</button>
+      <button class="chip small" data-tier="long">Long-Term</button>
+    </div>
     <textarea id="text" placeholder="Type, or tap the microphone on your keyboard to talk"></textarea>
     <div class="hint">To dictate: tap the microphone key on your phone keyboard.</div>
     <div class="row">
@@ -87,6 +104,11 @@
   <div id="items"></div>
   <details>
     <summary>More</summary>
+    <div class="hint">Property shown under every photo:</div>
+    <input id="edname" type="text" placeholder="Property name" style="width:100%;padding:10px;margin-bottom:6px;border:1px solid #bbb;border-radius:8px">
+    <input id="edaddr1" type="text" placeholder="Street address" style="width:100%;padding:10px;margin-bottom:6px;border:1px solid #bbb;border-radius:8px">
+    <input id="edaddr2" type="text" placeholder="City, State Zip" style="width:100%;padding:10px;margin-bottom:6px;border:1px solid #bbb;border-radius:8px">
+    <button id="savedetails" class="alt block">Save property details</button>
     <button id="switch" class="alt block">Switch or start another assessment</button>
     <button id="backup" class="alt block">Save a backup file</button>
     <label class="btn alt block">Restore from backup file

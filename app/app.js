@@ -61,9 +61,18 @@ async function openJob(id) {
 }
 
 $("startjob").onclick = async () => {
-  const j = await db.newJob($("jobname").value.trim());
-  $("jobname").value = "";
+  const j = await db.newJob($("jobname").value.trim(), $("jobaddr1").value.trim(), $("jobaddr2").value.trim());
+  $("jobname").value = ""; $("jobaddr1").value = ""; $("jobaddr2").value = "";
   openJob(j.id);
+};
+
+$("savedetails").onclick = async () => {
+  job.name = $("edname").value.trim() || job.name;
+  job.address1 = $("edaddr1").value.trim();
+  job.address2 = $("edaddr2").value.trim();
+  await db.putJob(job);
+  dirty(); renderItems();
+  $("status").textContent = "Property details saved.";
 };
 $("switch").onclick = showSetup;
 
@@ -74,6 +83,7 @@ function renderItems() {
   if (!job) return;
   urls.forEach(u => URL.revokeObjectURL(u)); urls = [];
   $("title").textContent = job.name;
+  $("edname").value = job.name || ""; $("edaddr1").value = job.address1 || ""; $("edaddr2").value = job.address2 || "";
   const mine = items.filter(i => sectionOf(i) === current);
   const p = mine.filter(i => i.photo).length, n = mine.filter(i => !i.photo).length;
   $("counts").textContent = `This section: ${p} photo${p === 1 ? "" : "s"}, ${n} note${n === 1 ? "" : "s"}. Total: ${items.length} items.`;
@@ -82,7 +92,7 @@ function renderItems() {
   const list = [...items].reverse().filter(it => !only || sectionOf(it) === current);
   $("items").replaceChildren(...list.map(it => {
     const d = document.createElement("div"); d.className = "item";
-    const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = sectionLabel(sectionOf(it)); d.append(tag);
+    const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = sectionLabel(sectionOf(it)) + (it.photo ? "" : "  |  " + noteTag(it)); d.append(tag);
     if (it.photo) {
       const img = document.createElement("img"); const u = URL.createObjectURL(it.photo); urls.push(u); img.src = u; d.append(img);
       const cap = document.createElement("input"); cap.type = "text"; cap.value = it.caption || "";
@@ -97,6 +107,18 @@ function renderItems() {
     move.append(new Option("Move to…", ""));
     SECTIONS.forEach(s => move.append(new Option(sectionLabel(s.id), s.id)));
     move.onchange = async () => { if (move.value) { it.sectionId = move.value; await db.putItem(it); report = null; $("saveReport").hidden = true; await load(); } };
+    if (!it.photo) {
+      const kind = document.createElement("select");
+      kind.append(new Option("Change type…", ""));
+      [["description", "", "Description"], ["condition", "", "Condition"], ["rec", "immediate", "Recommendation: Immediate"], ["rec", "short", "Recommendation: Short-Term"], ["rec", "long", "Recommendation: Long-Term"]]
+        .forEach(([t, tier, name]) => kind.append(new Option(name, t + "|" + tier)));
+      kind.onchange = async () => {
+        if (!kind.value) return;
+        const [t, tier] = kind.value.split("|");
+        it.noteType = t; it.tier = tier || null; await db.putItem(it); dirty(); await load();
+      };
+      tools.append(kind);
+    }
     const del = document.createElement("button"); del.className = "alt small"; del.textContent = "Delete";
     del.onclick = async () => { if (confirm("Delete this item?")) { await db.deleteItem(it.id); report = null; $("saveReport").hidden = true; await load(); } };
     tools.append(move, del); d.append(tools);
@@ -134,13 +156,34 @@ $("cam").onchange = async e => {
 };
 
 // ---------- notes ----------
-$("note").onclick = () => { $("notebox").hidden = false; $("text").focus(); };
+// A note is a Description, a Survey Condition statement, or a Recommendation (with a tier).
+let noteType = "description";
+let noteTier = "short";
+const TIER_NAMES = { immediate: "Immediate", short: "Short-Term", long: "Long-Term" };
+const noteTypeOf = it => it.noteType || "description";
+
+function noteTag(it) {
+  const t = noteTypeOf(it);
+  if (t === "condition") return "Condition";
+  if (t === "rec") return "Recommendation: " + TIER_NAMES[it.tier || "short"];
+  return "Description";
+}
+
+function syncChips() {
+  document.querySelectorAll("[data-type]").forEach(b => b.classList.toggle("on", b.dataset.type === noteType));
+  document.querySelectorAll("[data-tier]").forEach(b => b.classList.toggle("on", b.dataset.tier === noteTier));
+  $("tiers").hidden = noteType !== "rec";
+}
+document.querySelectorAll("[data-type]").forEach(b => { b.onclick = () => { noteType = b.dataset.type; syncChips(); }; });
+document.querySelectorAll("[data-tier]").forEach(b => { b.onclick = () => { noteTier = b.dataset.tier; syncChips(); }; });
+
+$("note").onclick = () => { syncChips(); $("notebox").hidden = false; $("text").focus(); };
 $("cancelnote").onclick = () => { $("text").value = ""; $("notebox").hidden = true; };
 $("savenote").onclick = async () => {
   const t = $("text").value.trim();
   if (!t) return;
   try {
-    await db.putItem({ id: db.uid(), jobId: job.id, ts: Date.now(), kind: "note", sectionId: current, caption: "", transcript: t, photo: null });
+    await db.putItem({ id: db.uid(), jobId: job.id, ts: Date.now(), kind: "note", sectionId: current, caption: "", transcript: t, photo: null, noteType, tier: noteType === "rec" ? noteTier : null });
     $("text").value = ""; $("notebox").hidden = true; $("status").textContent = "Note saved.";
     dirty(); await load();
   } catch (err) { $("status").textContent = "Note NOT saved: " + err.message + " (your text is still here)"; }

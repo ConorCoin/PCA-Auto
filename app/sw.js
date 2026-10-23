@@ -1,9 +1,9 @@
 // Caches the whole app so it opens with no signal. Serves the cache first and refreshes it in the background,
 // so a new version shows up the next time the app is opened.
-const CACHE = "pca-v3";
+const CACHE = "pca-v4";
 const FILES = [
   "./", "index.html", "app.js", "db.js", "export.js", "sections.js",
-  "vendor/docx.js", "manifest.webmanifest", "icon-192.png", "icon-512.png",
+  "vendor/docx.js", "manifest.webmanifest", "icon-192.png", "icon-512.png", "logo.png",
 ];
 
 self.addEventListener("install", e => {
