@@ -39,8 +39,8 @@ export const jobItems = async jobId =>
 export const putItem = item => run("items", "readwrite", s => s.put(item));
 export const deleteItem = id => run("items", "readwrite", s => s.delete(id));
 
-export async function newJob(name) {
-  const job = { id: uid(), name: name || "Untitled property", created: Date.now() };
+export async function newJob(name, address1 = "", address2 = "") {
+  const job = { id: uid(), name: name || "Untitled property", address1, address2, created: Date.now() };
   await putJob(job);
   return job;
 }
