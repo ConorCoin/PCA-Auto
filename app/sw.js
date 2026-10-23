@@ -1,8 +1,8 @@
 // Caches the whole app so it opens with no signal. Serves the cache first and refreshes it in the background,
 // so a new version shows up the next time the app is opened.
-const CACHE = "pca-v4";
+const CACHE = "pca-v6";
 const FILES = [
-  "./", "index.html", "app.js", "db.js", "export.js", "sections.js",
+  "./", "index.html", "app.js", "db.js", "export.js", "sections.js", "fields.js", "frontmatter.js", "report.js", "boilerplate.js",
   "vendor/docx.js", "manifest.webmanifest", "icon-192.png", "icon-512.png", "logo.png",
 ];
 
