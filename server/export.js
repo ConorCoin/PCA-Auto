@@ -26,7 +26,7 @@ export async function buildReport(job, jobDir) {
     .filter(i => i.kind !== "photo" && (i.result || i.transcript))
     .map(i => i.result ? i : {
       ...i,
-      result: { description: i.transcript, condition: "", recommendations: [], needs_review: true, review_reason: "Unprocessed note, wording not yet in report style." },
+      result: { description: i.transcript, condition: "", recommendations: [], needs_review: !i.plain, review_reason: "Unprocessed note, wording not yet in report style." },
     });
   const bySection = new Map();
   for (const it of notes) {

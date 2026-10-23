@@ -17,7 +17,7 @@ Open the URL on the phone (it must be HTTPS for camera/mic off-laptop, e.g. via 
 ## How the assessor uses it
 1. Pick the section once (or use the arrows to step through them in report order). It stays selected.
 2. **Photo**: tap, shoot. The photo is filed under the current section straight away. No AI. Optional caption underneath.
-3. **Note**: tap, dictate or type, save. Claude rewrites it into report wording (description, condition, recommendations). If that fails, the raw note is kept and flagged.
+3. **Note**: tap, dictate or type, save. Stored exactly as written under the current section. (AI rewriting into report wording exists but is off; set `PCA_AI=1` and `ANTHROPIC_API_KEY` to turn it on.)
 4. **Download Word report**: sections in report order, then a Photographic Log sorted by section order (general views first) with numbered captions. A blank caption becomes "View of <section name>".
 
 ## Layout

@@ -12,6 +12,9 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(ROOT, "data", "jobs");
 fs.mkdirSync(DATA, { recursive: true });
 
+// AI note rewriting is switched off unless PCA_AI=1 is set. Notes are then stored as written.
+const AI_ON = process.env.PCA_AI === "1";
+
 const app = express();
 app.use(express.json());
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
@@ -62,7 +65,9 @@ app.post("/api/jobs/:id/items", upload.array("photos", 10), async (req, res) => 
     result: null,
     error: null,
   };
-  if (kind === "note") {
+  if (kind === "note" && !AI_ON) {
+    item.plain = true; // stored exactly as typed or dictated
+  } else if (kind === "note") {
     const prev = [...job.items].reverse().find(i => i.result);
     try {
       item.result = await classify({
