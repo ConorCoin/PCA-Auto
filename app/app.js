@@ -44,10 +44,21 @@ async function showSetup() {
   $("title").textContent = "PCA Capture"; $("counts").textContent = "";
   const jobs = await db.listJobs();
   $("joblist").replaceChildren(...jobs.map(j => {
+    const row = document.createElement("div"); row.className = "row"; row.style.marginBottom = "6px";
     const b = document.createElement("button");
-    b.className = "alt job"; b.textContent = `${j.name}  (${new Date(j.created).toLocaleDateString()})`;
+    b.className = "alt job"; b.style.flex = "1"; b.style.marginBottom = "0"; b.textContent = `${j.name}  (${new Date(j.created).toLocaleDateString()})`;
     b.onclick = () => openJob(j.id);
-    return b;
+    const del = document.createElement("button");
+    del.className = "alt small"; del.textContent = "Delete"; del.style.width = "auto"; del.style.margin = "0";
+    del.onclick = async () => {
+      if (!confirm(`Delete "${j.name}" and all its photos and notes? This cannot be undone. (Tip: use "Save a backup file" first if you might want it back.)`)) return;
+      await db.deleteJob(j.id);
+      if (store.get("pca.job") === j.id) store.del("pca.job");
+      if (job && job.id === j.id) { job = null; items = []; }
+      showSetup();
+    };
+    row.append(b, del);
+    return row;
   }));
 }
 
@@ -110,12 +121,11 @@ function renderItems() {
     if (!it.photo) {
       const kind = document.createElement("select");
       kind.append(new Option("Change type…", ""));
-      [["description", "", "Description"], ["condition", "", "Condition"], ["rec", "immediate", "Recommendation: Immediate"], ["rec", "short", "Recommendation: Short-Term"], ["rec", "long", "Recommendation: Long-Term"]]
-        .forEach(([t, tier, name]) => kind.append(new Option(name, t + "|" + tier)));
+      [["description", "Description"], ["condition", "Condition"], ["rec", "Recommendation"]]
+        .forEach(([t, name]) => kind.append(new Option(name, t)));
       kind.onchange = async () => {
         if (!kind.value) return;
-        const [t, tier] = kind.value.split("|");
-        it.noteType = t; it.tier = tier || null; await db.putItem(it); dirty(); await load();
+        it.noteType = kind.value; await db.putItem(it); dirty(); await load();
       };
       tools.append(kind);
     }
@@ -156,26 +166,24 @@ $("cam").onchange = async e => {
 };
 
 // ---------- notes ----------
-// A note is a Description, a Survey Condition statement, or a Recommendation (with a tier).
+// A note is a Description, a Survey Condition statement, or a Recommendation.
 let noteType = "description";
-let noteTier = "short";
-const TIER_NAMES = { immediate: "Immediate", short: "Short-Term", long: "Long-Term" };
 const noteTypeOf = it => it.noteType || "description";
+const NO_REC = "No recommended Immediate Needs, Short-Term Needs, or Long-Term Needs were observed or reported at the time of our walk-through.";
 
 function noteTag(it) {
   const t = noteTypeOf(it);
   if (t === "condition") return "Condition";
-  if (t === "rec") return "Recommendation: " + TIER_NAMES[it.tier || "short"];
+  if (t === "rec") return "Recommendation";
   return "Description";
 }
 
 function syncChips() {
   document.querySelectorAll("[data-type]").forEach(b => b.classList.toggle("on", b.dataset.type === noteType));
-  document.querySelectorAll("[data-tier]").forEach(b => b.classList.toggle("on", b.dataset.tier === noteTier));
-  $("tiers").hidden = noteType !== "rec";
+  $("norec").hidden = noteType !== "rec";
 }
 document.querySelectorAll("[data-type]").forEach(b => { b.onclick = () => { noteType = b.dataset.type; syncChips(); }; });
-document.querySelectorAll("[data-tier]").forEach(b => { b.onclick = () => { noteTier = b.dataset.tier; syncChips(); }; });
+$("norecbtn").onclick = () => { $("text").value = NO_REC; $("text").focus(); };
 
 $("note").onclick = () => { syncChips(); $("notebox").hidden = false; $("text").focus(); };
 $("cancelnote").onclick = () => { $("text").value = ""; $("notebox").hidden = true; };
@@ -183,8 +191,9 @@ $("savenote").onclick = async () => {
   const t = $("text").value.trim();
   if (!t) return;
   try {
-    await db.putItem({ id: db.uid(), jobId: job.id, ts: Date.now(), kind: "note", sectionId: current, caption: "", transcript: t, photo: null, noteType, tier: noteType === "rec" ? noteTier : null });
-    $("text").value = ""; $("notebox").hidden = true; $("status").textContent = "Note saved.";
+    await db.putItem({ id: db.uid(), jobId: job.id, ts: Date.now(), kind: "note", sectionId: current, caption: "", transcript: t, photo: null, noteType });
+    $("text").value = ""; $("status").textContent = "Note saved."; // box stays open for the next note; Close hides it
+    $("text").focus();
     dirty(); await load();
   } catch (err) { $("status").textContent = "Note NOT saved: " + err.message + " (your text is still here)"; }
 };
@@ -246,6 +255,10 @@ $("restore").onchange = async e => {
 };
 
 // ---------- start ----------
+// Shown under More so you can tell which build the phone is running. Keep in step with CACHE in sw.js.
+const VERSION = "v7: full report, recommendation tab, delete assessment";
+$("version").textContent = "App version: " + VERSION;
+
 async function init() {
   buildPicker();
   try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch {}

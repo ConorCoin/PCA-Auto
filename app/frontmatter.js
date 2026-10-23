@@ -136,7 +136,7 @@ export function frontMatter(job, items, logo) {
 
   // ---------- Schedule of Material Physical Deficiencies, from the Recommendation notes ----------
   const recs = items
-    .filter(i => !i.photo && (i.noteType === "rec") && i.transcript)
+    .filter(i => !i.photo && (i.noteType === "rec") && i.transcript && !/^No recommended/i.test(i.transcript))
     .sort((a, b) => sectionOrder(a.sectionId || "photo") - sectionOrder(b.sectionId || "photo") || a.ts - b.ts);
   out.push(plain("Schedule of Material Physical Deficiencies Summary", { bold: true }, { spacing: { before: 240, after: 80 }, keepNext: true }));
   const rows = [["Sect. #", "Remedy", "Immediate Needs", "Short-Term Needs", "Long-Term Needs"]];
