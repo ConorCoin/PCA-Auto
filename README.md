@@ -1,32 +1,40 @@
 # PCA
 
 Automates the Property Condition Assessment (PCA) report (ASTM E2018 style). The assessor walks the site taking
-photos and dictating notes on their phone. Each note and photo is filed by Claude into the right report section,
-and the result exports as a Word draft.
+photos and typing or dictating notes on their phone, and exports a Word draft.
+
+It is a static web app (PWA). Everything runs and is stored on the phone. There is no server, no account, and
+no app store.
+
+## Use on a phone
+1. Host the `app/` folder on any static host (e.g. drag it onto https://app.netlify.com/drop).
+2. Open the link on the phone, open it once with signal, then Add to Home Screen.
+3. Pick a section once. **Photo** files a photo under it with one tap. **Note** saves typed text; to dictate, use the
+   microphone key on the phone keyboard.
+4. **Prepare Word report**, then **Save report** (opens the share sheet / Files).
+
+Photo log order follows the report's section order (general views first), then the order taken. A blank caption
+becomes "View of <section name>".
 
 ## Run locally
 ```
 npm install
-set ANTHROPIC_API_KEY=your-key      (PowerShell: $env:ANTHROPIC_API_KEY="your-key")
-npm start                           -> http://localhost:3000
-npm test                            -> offline check of the Word export (no key needed)
+npm start        -> http://localhost:3000   (static server for testing)
+npm run vendor   -> refresh app/vendor/docx.js from node_modules
 ```
-Open the URL on the phone (it must be HTTPS for camera/mic off-laptop, e.g. via a Cloudflare tunnel), then
-"Add to Home Screen". No app store needed.
-
-## How the assessor uses it
-1. Pick the section once (or use the arrows to step through them in report order). It stays selected.
-2. **Photo**: tap, shoot. The photo is filed under the current section straight away. No AI. Optional caption underneath.
-3. **Note**: tap, dictate or type, save. Stored exactly as written under the current section. (AI rewriting into report wording exists but is off; set `PCA_AI=1` and `ANTHROPIC_API_KEY` to turn it on.)
-4. **Download Word report**: sections in report order, then a Photographic Log sorted by section order (general views first) with numbered captions. A blank caption becomes "View of <section name>".
 
 ## Layout
-- `app/` - phone PWA
-- `server/sections.js` - report sections (from the SM&E sample report)
-- `server/classify.js` - Claude call for notes only
-- `server/export.js` - builds the .docx
-- `data/` - jobs and photos
+- `app/index.html`, `app/app.js` - screen and logic
+- `app/db.js` - phone storage (IndexedDB)
+- `app/export.js` - Word export (uses `vendor/docx.js`)
+- `app/sections.js` - report sections from the SM&E sample report
+- `app/sw.js`, `app/manifest.webmanifest` - offline + install
+- `samples/` - sample finished report
+
+## Limits
+- The phone holds the only copy. Use More -> "Save a backup file" regularly; browsers can clear site storage.
+- The earlier server version with AI note rewriting (Claude) is in git history (commit 83f3a67).
 
 ## Not built yet
-Offline queue, front matter form (property data, interviewees), executive summary text, boilerplate sections,
-10-year cost tables with inflation, unit-cost price list, audio transcription on the server.
+Front matter form (property data, interviewees), executive summary text, boilerplate sections, 10-year cost
+tables, recommendations capture.
