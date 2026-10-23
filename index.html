@@ -6,35 +6,136 @@
 <title>PCA Field Capture</title>
 <link rel="manifest" href="manifest.webmanifest">
 <style>
-  body { font-family: system-ui, sans-serif; margin: 0; padding: 16px; }
-  button, label.btn { display: block; width: 100%; padding: 16px; margin: 8px 0; font-size: 18px;
-    background: #0b5d3b; color: #fff; border: 0; border-radius: 8px; text-align: center; }
-  #notes div { border-bottom: 1px solid #ddd; padding: 8px 0; }
-  img { max-width: 100%; border-radius: 6px; }
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 16px; max-width: 560px; margin-inline: auto; }
+  h1 { font-size: 20px; margin: 0 0 12px; }
+  button, .btn, select, textarea, input[type=text] { width: 100%; box-sizing: border-box; font-size: 17px; margin: 6px 0; }
+  button, .btn { padding: 14px; background: #0b5d3b; color: #fff; border: 0; border-radius: 8px; text-align: center; display: block; }
+  button.alt, .btn.alt { background: #e6efe9; color: #0b5d3b; }
+  button:disabled { opacity: .5; }
+  textarea, select, input[type=text] { padding: 10px; border: 1px solid #bbb; border-radius: 8px; }
+  textarea { min-height: 90px; }
+  #thumbs img { height: 64px; border-radius: 6px; margin: 2px; }
+  .item { border-top: 1px solid #ddd; padding: 10px 0; font-size: 15px; }
+  .item img { height: 56px; border-radius: 4px; margin-right: 4px; }
+  .tag { display: inline-block; background: #e6efe9; border-radius: 4px; padding: 1px 6px; font-size: 13px; }
+  .warn { color: #b00020; }
+  #status { min-height: 1.4em; font-size: 14px; color: #555; }
 </style>
 </head>
 <body>
-<h1>PCA Capture</h1>
-<label class="btn">Take photo
-  <input id="photo" type="file" accept="image/*" capture="environment" hidden>
-</label>
-<button id="voice">Dictate note</button>
-<div id="notes"></div>
+<h1 id="title">PCA Capture</h1>
+
+<div id="setup" hidden>
+  <input id="jobname" type="text" placeholder="Property name">
+  <button id="startjob">Start assessment</button>
+</div>
+
+<div id="main" hidden>
+  <select id="section"><option value="">Section: auto-detect</option></select>
+  <button id="voice" class="alt">Dictate note</button>
+  <textarea id="text" placeholder="Spoken or typed note"></textarea>
+  <label class="btn alt">Add photos
+    <input id="photos" type="file" accept="image/*" capture="environment" multiple hidden>
+  </label>
+  <div id="thumbs"></div>
+  <button id="send">Save item</button>
+  <div id="status"></div>
+  <a id="export" class="btn alt" href="#">Download Word report</a>
+  <div id="items"></div>
+</div>
+
 <script>
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
-const notes = document.getElementById("notes");
-document.getElementById("photo").onchange = e => {
-  const f = e.target.files[0]; if (!f) return;
-  const d = document.createElement("div"), i = document.createElement("img");
-  i.src = URL.createObjectURL(f); d.appendChild(i); notes.prepend(d);
+const $ = id => document.getElementById(id);
+let jobId = localStorage.getItem("pca.job");
+let sections = [];
+let files = [];
+
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+function renderItems(job) {
+  $("title").textContent = job.name;
+  $("export").href = `/api/jobs/${job.id}/export`;
+  const title = id => (sections.find(s => s.id === id) || {}).title || "Unfiled";
+  $("items").replaceChildren(...[...job.items].reverse().map(it => {
+    const d = document.createElement("div");
+    d.className = "item";
+    const sid = it.sectionId || (it.result && it.result.section_id);
+    const head = document.createElement("div");
+    const tag = document.createElement("span");
+    tag.className = "tag";
+    tag.textContent = it.result ? `${sid} ${title(sid)}` : "Not filed";
+    head.append(tag);
+    if (it.error) { const w = document.createElement("span"); w.className = "warn"; w.textContent = " filing failed: " + it.error; head.append(w); }
+    else if (it.result && it.result.needs_review) { const w = document.createElement("span"); w.className = "warn"; w.textContent = " review: " + (it.result.review_reason || ""); head.append(w); }
+    const body = document.createElement("div");
+    body.textContent = it.transcript;
+    d.append(head, body);
+    it.photos.forEach(p => { const i = document.createElement("img"); i.src = `/api/jobs/${job.id}/photos/${p}`; d.append(i); });
+    const pick = document.createElement("select");
+    pick.append(new Option("Move to section…", ""));
+    sections.forEach(s => pick.append(new Option(`${s.id} ${s.title}`, s.id)));
+    pick.onchange = async () => {
+      if (!pick.value) return;
+      await api(`/api/jobs/${job.id}/items/${it.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sectionId: pick.value }) });
+      refresh();
+    };
+    d.append(pick);
+    return d;
+  }));
+}
+
+async function refresh() { renderItems(await api(`/api/jobs/${jobId}`)); }
+
+async function init() {
+  sections = await api("/api/sections");
+  sections.forEach(s => $("section").append(new Option(`${s.id} ${s.title}`, s.id)));
+  if (jobId) {
+    try { await refresh(); $("main").hidden = false; return; } catch { localStorage.removeItem("pca.job"); }
+  }
+  $("setup").hidden = false;
+}
+
+$("startjob").onclick = async () => {
+  const job = await api("/api/jobs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: $("jobname").value }) });
+  jobId = job.id; localStorage.setItem("pca.job", jobId);
+  $("setup").hidden = true; $("main").hidden = false; renderItems(job);
 };
-document.getElementById("voice").onclick = () => {
+
+$("photos").onchange = e => {
+  files.push(...e.target.files); e.target.value = "";
+  $("thumbs").replaceChildren(...files.map(f => { const i = document.createElement("img"); i.src = URL.createObjectURL(f); return i; }));
+};
+
+$("voice").onclick = () => {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) return alert("Speech recognition not supported in this browser");
-  const r = new SR(); r.lang = "en-US";
-  r.onresult = ev => { const d = document.createElement("div"); d.textContent = ev.results[0][0].transcript; notes.prepend(d); };
-  r.start();
+  if (!SR) return alert("Speech recognition is not supported in this browser. Type the note, or use the keyboard microphone.");
+  const r = new SR(); r.lang = "en-US"; r.continuous = true; r.interimResults = false;
+  r.onresult = ev => { for (let i = ev.resultIndex; i < ev.results.length; i++) $("text").value += (ev.results[i][0].transcript + " "); };
+  r.onend = () => { $("voice").textContent = "Dictate note"; };
+  r.start(); $("voice").textContent = "Listening… (tap Save when done)";
 };
+
+$("send").onclick = async () => {
+  if (!$("text").value.trim() && !files.length) return;
+  $("send").disabled = true; $("status").textContent = "Filing…";
+  const fd = new FormData();
+  fd.append("transcript", $("text").value);
+  fd.append("section", $("section").value);
+  files.forEach(f => fd.append("photos", f));
+  try {
+    await api(`/api/jobs/${jobId}/items`, { method: "POST", body: fd });
+    $("text").value = ""; files = []; $("thumbs").replaceChildren(); $("status").textContent = "Saved.";
+    refresh();
+  } catch (e) { $("status").textContent = "Upload failed: " + e.message; }
+  $("send").disabled = false;
+};
+
+init();
 </script>
 </body>
 </html>
