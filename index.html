@@ -226,7 +226,7 @@ $("savenote").onclick = async () => {
   const t = $("text").value.trim();
   if (!t) return;
   if (rec) rec.stop();
-  $("savenote").disabled = true; $("status").textContent = "Writing up note…";
+  $("savenote").disabled = true; $("status").textContent = "Saving note…";
   try {
     const fd = new FormData();
     fd.append("kind", "note"); fd.append("section", current); fd.append("transcript", t);
