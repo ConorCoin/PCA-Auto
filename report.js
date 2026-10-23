@@ -4,11 +4,6 @@ import { SECTIONS, sectionTitle } from "./sections.js";
 import * as B from "./boilerplate.js";
 
 const GREY = "808080";
-const TIERS = [
-  ["immediate", "Recommended Immediate Needs"],
-  ["short", "Recommended Short-Term Needs"],
-  ["long", "Recommended Long-Term Needs"],
-];
 // Titles that differ from the on-phone picker labels.
 const TITLE_OVERRIDE = { "6.1": "Parts/Service & Showroom/Office Buildings" };
 
@@ -82,7 +77,6 @@ export function reportParts(job, items, logo) {
   // A report subsection: description, Survey Condition and Analysis, Recommendations.
   function sectionBlock(id, heading, level, intro) {
     const notes = notesBy.get(id) || [];
-    const visited = notes.length > 0;
     const out = [];
     if (heading) out.push(sub(heading, level));
     if (intro) out.push(P(intro));
@@ -95,18 +89,7 @@ export function reportParts(job, items, logo) {
 
     out.push(bold("Recommendations:"));
     const recs = notes.filter(n => typeOf(n) === "rec");
-    if (!visited) {
-      out.push(TODO());
-    } else {
-      if (!recs.length) out.push(P("No Immediate Needs, Short-Term Needs, or Long-Term Needs were observed or reported at the time of our walk-through."));
-      else if (!recs.some(n => n.tier === "immediate")) out.push(P("No recommended Immediate Needs were observed or reported at the time of our walk-through."));
-      for (const [tier, label] of TIERS) {
-        const r = recs.filter(n => (n.tier || "short") === tier);
-        if (!r.length) continue;
-        out.push(P(`${label}:`, { italics: true }, { keepNext: true }));
-        r.forEach(n => out.push(bullet(n.transcript + (n.year ? ` (Year ${n.year})` : ""))));
-      }
-    }
+    recs.length ? recs.forEach(n => out.push(P(n.transcript))) : out.push(TODO());
     return out;
   }
 

@@ -85,16 +85,14 @@
       <button class="chip small" data-type="condition">Condition</button>
       <button class="chip small" data-type="rec">Recommendation</button>
     </div>
-    <div class="row" id="tiers" style="margin-top:6px" hidden>
-      <button class="chip small" data-tier="immediate">Immediate</button>
-      <button class="chip small" data-tier="short">Short-Term</button>
-      <button class="chip small" data-tier="long">Long-Term</button>
+    <div class="row" id="norec" style="margin-top:6px" hidden>
+      <button id="norecbtn" class="alt small">No recommendation</button>
     </div>
     <textarea id="text" placeholder="Type, or tap the microphone on your keyboard to talk"></textarea>
     <div class="hint">To dictate: tap the microphone key on your phone keyboard.</div>
     <div class="row">
       <button id="savenote">Save note</button>
-      <button id="cancelnote" class="alt">Cancel</button>
+      <button id="cancelnote" class="alt">Close</button>
     </div>
   </div>
   <div id="status"></div>
@@ -104,6 +102,7 @@
   <div id="items"></div>
   <details>
     <summary>More</summary>
+    <div class="hint" id="version"></div>
     <div class="hint">Property shown under every photo:</div>
     <input id="edname" type="text" placeholder="Property name" style="width:100%;padding:10px;margin-bottom:6px;border:1px solid #bbb;border-radius:8px">
     <input id="edaddr1" type="text" placeholder="Street address" style="width:100%;padding:10px;margin-bottom:6px;border:1px solid #bbb;border-radius:8px">
