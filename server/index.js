@@ -48,29 +48,44 @@ app.post("/api/jobs/:id/items", upload.array("photos", 10), async (req, res) => 
     fs.writeFileSync(path.join(jobDir(job.id), "photos", name), f.buffer);
     return { name, mediaType: ext === "png" ? "image/png" : "image/jpeg", data: f.buffer.toString("base64") };
   });
+  // "photo" items are filed by the section the assessor had selected and never touch the AI.
+  // "note" items go to Claude to be written up in report voice.
+  const kind = req.body.kind === "photo" ? "photo" : "note";
   const item = {
     id: crypto.randomBytes(4).toString("hex"),
     ts: Date.now(),
+    kind,
     transcript: req.body.transcript || "",
+    caption: req.body.caption || "",
     photos: saved.map(s => s.name),
-    sectionId: req.body.section || null, // the assessor's manual choice overrides the model
+    sectionId: req.body.section || null, // the assessor's choice always wins over the model
     result: null,
     error: null,
   };
-  const prev = [...job.items].reverse().find(i => i.result);
-  try {
-    item.result = await classify({
-      transcript: item.transcript,
-      photos: saved,
-      sectionHint: item.sectionId,
-      currentSection: prev ? prev.sectionId || prev.result.section_id : null,
-    });
-  } catch (e) {
-    item.error = String(e.message || e); // raw capture is kept so nothing is lost
+  if (kind === "note") {
+    const prev = [...job.items].reverse().find(i => i.result);
+    try {
+      item.result = await classify({
+        transcript: item.transcript,
+        photos: [],
+        sectionHint: item.sectionId,
+        currentSection: prev ? prev.sectionId || prev.result.section_id : null,
+      });
+    } catch (e) {
+      item.error = String(e.message || e); // raw note is kept so nothing is lost
+    }
   }
   job.items.push(item);
   save(job);
   res.json(item);
+});
+
+app.delete("/api/jobs/:id/items/:itemId", (req, res) => {
+  const job = load(req.params.id);
+  if (!job) return res.status(404).json({ error: "not found" });
+  job.items = job.items.filter(i => i.id !== req.params.itemId);
+  save(job);
+  res.json({ ok: true });
 });
 
 app.patch("/api/jobs/:id/items/:itemId", (req, res) => {
@@ -78,6 +93,7 @@ app.patch("/api/jobs/:id/items/:itemId", (req, res) => {
   const item = job?.items.find(i => i.id === req.params.itemId);
   if (!item) return res.status(404).json({ error: "not found" });
   if (req.body.sectionId !== undefined) item.sectionId = req.body.sectionId;
+  if (req.body.caption !== undefined) item.caption = req.body.caption;
   save(job);
   res.json(item);
 });

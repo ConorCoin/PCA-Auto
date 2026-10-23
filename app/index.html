@@ -6,133 +6,235 @@
 <title>PCA Field Capture</title>
 <link rel="manifest" href="manifest.webmanifest">
 <style>
-  body { font-family: system-ui, sans-serif; margin: 0; padding: 16px; max-width: 560px; margin-inline: auto; }
-  h1 { font-size: 20px; margin: 0 0 12px; }
-  button, .btn, select, textarea, input[type=text] { width: 100%; box-sizing: border-box; font-size: 17px; margin: 6px 0; }
-  button, .btn { padding: 14px; background: #0b5d3b; color: #fff; border: 0; border-radius: 8px; text-align: center; display: block; }
-  button.alt, .btn.alt { background: #e6efe9; color: #0b5d3b; }
+  :root { --g: #0b5d3b; --lg: #e6efe9; }
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 0 0 40px; max-width: 560px; margin-inline: auto; }
+  header { position: sticky; top: 0; background: #fff; padding: 10px 12px; border-bottom: 1px solid #ddd; z-index: 5; }
+  h1 { font-size: 15px; margin: 0 0 6px; color: #555; font-weight: 600; }
+  .row { display: flex; gap: 6px; }
+  .row > * { margin: 0; }
+  button, .btn, select, textarea, input[type=text] { box-sizing: border-box; font-size: 17px; }
+  button, .btn { padding: 14px; background: var(--g); color: #fff; border: 0; border-radius: 10px; text-align: center; cursor: pointer; }
+  button.alt, .btn.alt { background: var(--lg); color: var(--g); }
+  button.small { padding: 6px 10px; font-size: 14px; border-radius: 6px; }
   button:disabled { opacity: .5; }
-  textarea, select, input[type=text] { padding: 10px; border: 1px solid #bbb; border-radius: 8px; }
-  textarea { min-height: 90px; }
-  #thumbs img { height: 64px; border-radius: 6px; margin: 2px; }
+  #section { flex: 1; min-width: 0; padding: 12px 8px; font-size: 17px; font-weight: 600; border: 2px solid var(--g); border-radius: 10px; background: #fff; }
+  #prev, #next { width: 52px; padding: 12px 0; font-size: 22px; }
+  #counts { font-size: 13px; color: #555; margin-top: 6px; }
+  .pad { padding: 0 12px; }
+  .big { flex: 1; padding: 26px 8px; font-size: 20px; font-weight: 600; margin: 0; }
+  .actions { margin: 12px 0; }
+  #notebox { margin: 8px 0; }
+  textarea { width: 100%; min-height: 110px; padding: 10px; border: 1px solid #bbb; border-radius: 8px; }
+  #status { min-height: 1.3em; font-size: 14px; color: #555; margin: 4px 0; }
   .item { border-top: 1px solid #ddd; padding: 10px 0; font-size: 15px; }
-  .item img { height: 56px; border-radius: 4px; margin-right: 4px; }
-  .tag { display: inline-block; background: #e6efe9; border-radius: 4px; padding: 1px 6px; font-size: 13px; }
-  .warn { color: #b00020; }
-  #status { min-height: 1.4em; font-size: 14px; color: #555; }
+  .item img { width: 100%; border-radius: 8px; display: block; margin-bottom: 6px; }
+  .item input[type=text] { width: 100%; padding: 8px; border: 1px solid #bbb; border-radius: 6px; font-size: 15px; }
+  .tag { display: inline-block; background: var(--lg); border-radius: 4px; padding: 1px 6px; font-size: 13px; margin-bottom: 4px; }
+  .warn { color: #b00020; font-size: 13px; }
+  .tools { display: flex; gap: 6px; margin-top: 6px; }
+  .tools select { flex: 1; min-width: 0; font-size: 14px; padding: 4px; }
+  #setup { padding: 12px; }
+  #setup input { width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid #bbb; border-radius: 8px; }
+  #setup button { width: 100%; }
+  .foot { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 14px; }
 </style>
 </head>
 <body>
-<h1 id="title">PCA Capture</h1>
+<header>
+  <h1 id="title">PCA Capture</h1>
+  <div id="bar" class="row" hidden>
+    <button id="prev" class="alt" aria-label="Previous section">&lsaquo;</button>
+    <select id="section" aria-label="Current section"></select>
+    <button id="next" class="alt" aria-label="Next section">&rsaquo;</button>
+  </div>
+  <div id="counts"></div>
+</header>
 
 <div id="setup" hidden>
   <input id="jobname" type="text" placeholder="Property name">
   <button id="startjob">Start assessment</button>
 </div>
 
-<div id="main" hidden>
-  <select id="section"><option value="">Section: auto-detect</option></select>
-  <button id="voice" class="alt">Dictate note</button>
-  <textarea id="text" placeholder="Spoken or typed note"></textarea>
-  <label class="btn alt">Add photos
-    <input id="photos" type="file" accept="image/*" capture="environment" multiple hidden>
-  </label>
-  <div id="thumbs"></div>
-  <button id="send">Save item</button>
+<div id="main" class="pad" hidden>
+  <div class="actions row">
+    <label class="btn big">Photo
+      <input id="cam" type="file" accept="image/*" capture="environment" hidden>
+    </label>
+    <button id="note" class="alt big">Note</button>
+  </div>
+  <div id="notebox" hidden>
+    <textarea id="text" placeholder="Speak or type what you see in this section"></textarea>
+    <div class="row">
+      <button id="dictate" class="alt">Dictate</button>
+      <button id="savenote">Save note</button>
+      <button id="cancelnote" class="alt">Cancel</button>
+    </div>
+  </div>
   <div id="status"></div>
-  <a id="export" class="btn alt" href="#">Download Word report</a>
+  <div class="foot">
+    <label><input id="onlyhere" type="checkbox" checked> Only this section</label>
+  </div>
+  <a id="export" class="btn alt" style="display:block" href="#">Download Word report</a>
   <div id="items"></div>
 </div>
 
 <script>
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
 const $ = id => document.getElementById(id);
-let jobId = localStorage.getItem("pca.job");
+const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} }, del: k => { try { localStorage.removeItem(k); } catch {} } };
+let jobId = store.get("pca.job");
 let sections = [];
-let files = [];
+let job = null;
+let current = null;
 
 async function api(path, opts) {
   const r = await fetch(path, opts);
   if (!r.ok) throw new Error(await r.text());
   return r.json();
 }
+const json = (method, body) => ({ method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+const titleOf = id => (sections.find(s => s.id === id) || {}).title || id;
+const label = s => (s.id === "photo" ? s.title : `${s.id} ${s.title}`);
 
-function renderItems(job) {
+function groupOf(id) {
+  if (id === "photo") return "General";
+  if (id.startsWith("3.")) return "Site";
+  if (id.startsWith("4.")) return "Structure and Roof";
+  if (id.startsWith("5.")) return "Mechanical, Electrical, Fire";
+  return "Interior and Other";
+}
+
+function buildPicker() {
+  const sel = $("section");
+  const groups = {};
+  sections.forEach(s => {
+    const g = groupOf(s.id);
+    if (!groups[g]) { groups[g] = document.createElement("optgroup"); groups[g].label = g; sel.append(groups[g]); }
+    groups[g].append(new Option(label(s), s.id));
+  });
+  current = sections.find(s => s.id === store.get("pca.section")) ? store.get("pca.section") : sections[0].id;
+  sel.value = current;
+}
+
+function setSection(id) {
+  current = id; $("section").value = id; store.set("pca.section", id);
+  renderItems();
+}
+
+function renderCounts() {
+  const mine = job.items.filter(i => (i.sectionId || (i.result && i.result.section_id)) === current);
+  const p = mine.filter(i => i.kind === "photo").length, n = mine.filter(i => i.kind !== "photo").length;
+  $("counts").textContent = `This section: ${p} photo${p === 1 ? "" : "s"}, ${n} note${n === 1 ? "" : "s"}. Total: ${job.items.length} items.`;
+}
+
+function sectionOf(it) { return it.sectionId || (it.result && it.result.section_id) || "photo"; }
+
+function renderItems() {
   $("title").textContent = job.name;
   $("export").href = `/api/jobs/${job.id}/export`;
-  const title = id => (sections.find(s => s.id === id) || {}).title || "Unfiled";
-  $("items").replaceChildren(...[...job.items].reverse().map(it => {
-    const d = document.createElement("div");
-    d.className = "item";
-    const sid = it.sectionId || (it.result && it.result.section_id);
-    const head = document.createElement("div");
-    const tag = document.createElement("span");
-    tag.className = "tag";
-    tag.textContent = it.result ? `${sid} ${title(sid)}` : "Not filed";
-    head.append(tag);
-    if (it.error) { const w = document.createElement("span"); w.className = "warn"; w.textContent = " filing failed: " + it.error; head.append(w); }
-    else if (it.result && it.result.needs_review) { const w = document.createElement("span"); w.className = "warn"; w.textContent = " review: " + (it.result.review_reason || ""); head.append(w); }
-    const body = document.createElement("div");
-    body.textContent = it.transcript;
-    d.append(head, body);
-    it.photos.forEach(p => { const i = document.createElement("img"); i.src = `/api/jobs/${job.id}/photos/${p}`; d.append(i); });
-    const pick = document.createElement("select");
-    pick.append(new Option("Move to section…", ""));
-    sections.forEach(s => pick.append(new Option(`${s.id} ${s.title}`, s.id)));
-    pick.onchange = async () => {
-      if (!pick.value) return;
-      await api(`/api/jobs/${job.id}/items/${it.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sectionId: pick.value }) });
-      refresh();
-    };
-    d.append(pick);
+  renderCounts();
+  const only = $("onlyhere").checked;
+  const list = [...job.items].reverse().filter(it => !only || sectionOf(it) === current);
+  $("items").replaceChildren(...list.map(it => {
+    const d = document.createElement("div"); d.className = "item";
+    const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = label({ id: sectionOf(it), title: titleOf(sectionOf(it)) }); d.append(tag);
+    if (it.error) { const w = document.createElement("div"); w.className = "warn"; w.textContent = "Not rewritten (kept as typed): " + it.error.slice(0, 120); d.append(w); }
+    else if (it.result && it.result.needs_review) { const w = document.createElement("div"); w.className = "warn"; w.textContent = "Review: " + (it.result.review_reason || ""); d.append(w); }
+    if (it.kind === "photo") {
+      it.photos.forEach(p => { const i = document.createElement("img"); i.src = `/api/jobs/${job.id}/photos/${p}`; d.append(i); });
+      const cap = document.createElement("input"); cap.type = "text"; cap.value = it.caption || ""; cap.placeholder = `Caption (blank = "View of ${titleOf(sectionOf(it)).toLowerCase()}")`;
+      cap.onchange = () => api(`/api/jobs/${job.id}/items/${it.id}`, json("PATCH", { caption: cap.value })).catch(e => alert(e.message));
+      d.append(cap);
+    } else {
+      const t = document.createElement("div"); t.textContent = it.transcript; d.append(t);
+      if (it.result && it.result.description) { const r = document.createElement("div"); r.style.color = "#555"; r.style.marginTop = "4px"; r.textContent = "Report text: " + it.result.description + " " + (it.result.condition || ""); d.append(r); }
+    }
+    const tools = document.createElement("div"); tools.className = "tools";
+    const move = document.createElement("select");
+    move.append(new Option("Move to…", ""));
+    sections.forEach(s => move.append(new Option(label(s), s.id)));
+    move.onchange = async () => { if (move.value) { await api(`/api/jobs/${job.id}/items/${it.id}`, json("PATCH", { sectionId: move.value })); await refresh(); } };
+    const del = document.createElement("button"); del.className = "alt small"; del.textContent = "Delete";
+    del.onclick = async () => { if (confirm("Delete this item?")) { await api(`/api/jobs/${job.id}/items/${it.id}`, { method: "DELETE" }); await refresh(); } };
+    tools.append(move, del); d.append(tools);
     return d;
   }));
 }
 
-async function refresh() { renderItems(await api(`/api/jobs/${jobId}`)); }
+async function refresh() { job = await api(`/api/jobs/${jobId}`); renderItems(); }
 
 async function init() {
   sections = await api("/api/sections");
-  sections.forEach(s => $("section").append(new Option(`${s.id} ${s.title}`, s.id)));
+  buildPicker();
   if (jobId) {
-    try { await refresh(); $("main").hidden = false; return; } catch { localStorage.removeItem("pca.job"); }
+    try { await refresh(); show(); return; } catch { store.del("pca.job"); }
   }
   $("setup").hidden = false;
 }
+function show() { $("setup").hidden = true; $("main").hidden = false; $("bar").hidden = false; }
 
 $("startjob").onclick = async () => {
-  const job = await api("/api/jobs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: $("jobname").value }) });
-  jobId = job.id; localStorage.setItem("pca.job", jobId);
-  $("setup").hidden = true; $("main").hidden = false; renderItems(job);
+  const j = await api("/api/jobs", json("POST", { name: $("jobname").value }));
+  jobId = j.id; store.set("pca.job", jobId); job = j; show(); renderItems();
 };
 
-$("photos").onchange = e => {
-  files.push(...e.target.files); e.target.value = "";
-  $("thumbs").replaceChildren(...files.map(f => { const i = document.createElement("img"); i.src = URL.createObjectURL(f); return i; }));
-};
+$("section").onchange = e => setSection(e.target.value);
+$("prev").onclick = () => { const i = sections.findIndex(s => s.id === current); if (i > 0) setSection(sections[i - 1].id); };
+$("next").onclick = () => { const i = sections.findIndex(s => s.id === current); if (i < sections.length - 1) setSection(sections[i + 1].id); };
+$("onlyhere").onchange = renderItems;
 
-$("voice").onclick = () => {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) return alert("Speech recognition is not supported in this browser. Type the note, or use the keyboard microphone.");
-  const r = new SR(); r.lang = "en-US"; r.continuous = true; r.interimResults = false;
-  r.onresult = ev => { for (let i = ev.resultIndex; i < ev.results.length; i++) $("text").value += (ev.results[i][0].transcript + " "); };
-  r.onend = () => { $("voice").textContent = "Dictate note"; };
-  r.start(); $("voice").textContent = "Listening… (tap Save when done)";
-};
-
-$("send").onclick = async () => {
-  if (!$("text").value.trim() && !files.length) return;
-  $("send").disabled = true; $("status").textContent = "Filing…";
-  const fd = new FormData();
-  fd.append("transcript", $("text").value);
-  fd.append("section", $("section").value);
-  files.forEach(f => fd.append("photos", f));
+async function shrink(file, max = 1600) {
   try {
+    const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const s = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+    c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+    const blob = await new Promise(r => c.toBlob(r, "image/jpeg", 0.82));
+    return blob || file;
+  } catch { return file; }
+}
+
+// One tap: the photo is filed under the current section immediately. No AI, no extra steps.
+$("cam").onchange = async e => {
+  const f = e.target.files[0]; e.target.value = "";
+  if (!f) return;
+  $("status").textContent = "Saving photo…";
+  try {
+    const fd = new FormData();
+    fd.append("kind", "photo"); fd.append("section", current);
+    fd.append("photos", await shrink(f), "photo.jpg");
     await api(`/api/jobs/${jobId}/items`, { method: "POST", body: fd });
-    $("text").value = ""; files = []; $("thumbs").replaceChildren(); $("status").textContent = "Saved.";
-    refresh();
-  } catch (e) { $("status").textContent = "Upload failed: " + e.message; }
-  $("send").disabled = false;
+    $("status").textContent = "Photo saved to " + titleOf(current) + ".";
+    await refresh();
+  } catch (err) { $("status").textContent = "Photo NOT saved: " + err.message + " (take it again)"; }
+};
+
+let rec = null;
+$("note").onclick = () => { $("notebox").hidden = false; $("text").focus(); };
+$("cancelnote").onclick = () => { if (rec) rec.stop(); $("text").value = ""; $("notebox").hidden = true; };
+$("dictate").onclick = () => {
+  if (rec) { rec.stop(); return; }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return alert("Dictation isn't supported in this browser. Use the microphone on your keyboard instead.");
+  rec = new SR(); rec.lang = "en-US"; rec.continuous = true; rec.interimResults = false;
+  rec.onresult = ev => { for (let i = ev.resultIndex; i < ev.results.length; i++) $("text").value += ev.results[i][0].transcript + " "; };
+  rec.onend = () => { rec = null; $("dictate").textContent = "Dictate"; };
+  rec.start(); $("dictate").textContent = "Stop";
+};
+$("savenote").onclick = async () => {
+  const t = $("text").value.trim();
+  if (!t) return;
+  if (rec) rec.stop();
+  $("savenote").disabled = true; $("status").textContent = "Writing up note…";
+  try {
+    const fd = new FormData();
+    fd.append("kind", "note"); fd.append("section", current); fd.append("transcript", t);
+    await api(`/api/jobs/${jobId}/items`, { method: "POST", body: fd });
+    $("text").value = ""; $("notebox").hidden = true; $("status").textContent = "Note saved.";
+    await refresh();
+  } catch (err) { $("status").textContent = "Note NOT saved: " + err.message + " (your text is still here)"; }
+  $("savenote").disabled = false;
 };
 
 init();

@@ -1,5 +1,6 @@
 // Report sections, mirroring the SM&E PCA report (ASTM E2018-24) structure.
 export const SECTIONS = [
+  { id: "photo", title: "General Views (building elevations, site)", hint: "overall views of building elevations and the site; no specific system" },
   { id: "3.1", title: "Parcel Configuration", hint: "lot, parcels, acreage, buildings on site" },
   { id: "3.2.1", title: "Topography", hint: "grade, slopes, site elevation" },
   { id: "3.2.2", title: "Storm Water Drainage", hint: "catch basins, inlets, detention, gutters, ponding" },
@@ -29,7 +30,6 @@ export const SECTIONS = [
   { id: "8", title: "Suspect Water Intrusion and Microbial Growth", hint: "leaks, stains, moisture, mold, suspect microbial growth" },
   { id: "9", title: "Natural Hazard Information", hint: "flood, seismic, wind zones" },
   { id: "2.2", title: "Property Personnel Interviewed/Contacted", hint: "who the assessor spoke with, name, title, phone, statements from staff" },
-  { id: "photo", title: "General Photos (site/building views)", hint: "overall views of building elevations, site; no specific system" },
 ];
 
 export const SECTION_IDS = SECTIONS.map(s => s.id);

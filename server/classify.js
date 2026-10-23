@@ -59,7 +59,7 @@ export async function classify({ transcript, photos = [], sectionHint, currentSe
     text: [
       `Transcript: ${transcript || "(none, photo only)"}`,
       `Photos attached: ${photos.length}`,
-      sectionHint ? `Assessor selected section: ${sectionHint}` : "",
+      sectionHint ? `The assessor already chose the section: ${sectionHint}. Use it as section_id.` : "",
       currentSection ? `Section of the previous item (assessor is probably still there): ${currentSection}` : "",
     ].filter(Boolean).join("\n"),
   });

@@ -19,23 +19,36 @@ function cell(text) {
 }
 
 export async function buildReport(job, jobDir) {
-  const items = job.items.filter(i => i.result);
+  const sectionOf = it => it.sectionId || it.result?.section_id || "photo";
+
+  // Notes become report text. A note the AI could not process is kept as raw text and flagged, never dropped.
+  const notes = job.items
+    .filter(i => i.kind !== "photo" && (i.result || i.transcript))
+    .map(i => i.result ? i : {
+      ...i,
+      result: { description: i.transcript, condition: "", recommendations: [], needs_review: true, review_reason: "Unprocessed note, wording not yet in report style." },
+    });
   const bySection = new Map();
-  for (const it of items) {
-    const id = it.sectionId || it.result.section_id;
+  for (const it of notes) {
+    const id = sectionOf(it);
     if (!bySection.has(id)) bySection.set(id, []);
     bySection.get(id).push(it);
   }
 
-  // Photograph numbers follow the order taken on site.
-  let photoNo = 0;
+  // Photo log follows report section order (general views first), then the order taken within a section.
   const photoLog = [];
-  for (const it of [...items].sort((a, b) => a.ts - b.ts)) {
+  for (const it of job.items) {
     it.photos.forEach((file, i) => {
-      photoNo += 1;
-      photoLog.push({ no: photoNo, file, caption: it.result.photo_captions?.[i] || "View of the property" });
+      const sid = sectionOf(it);
+      const title = (SECTIONS.find(s => s.id === sid)?.title ?? "the property").toLowerCase();
+      photoLog.push({
+        sid, ts: it.ts + i, file,
+        caption: it.caption || it.result?.photo_captions?.[i] || `View of ${title}`,
+      });
     });
   }
+  photoLog.sort((a, b) => sectionOrder(a.sid) - sectionOrder(b.sid) || a.ts - b.ts);
+  photoLog.forEach((p, i) => { p.no = i + 1; });
 
   const children = [];
   children.push(new Paragraph({ text: "Property Condition Assessment Report", heading: HeadingLevel.TITLE, alignment: AlignmentType.CENTER }));

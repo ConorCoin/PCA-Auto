@@ -14,12 +14,18 @@ npm test                            -> offline check of the Word export (no key 
 Open the URL on the phone (it must be HTTPS for camera/mic off-laptop, e.g. via a Cloudflare tunnel), then
 "Add to Home Screen". No app store needed.
 
+## How the assessor uses it
+1. Pick the section once (or use the arrows to step through them in report order). It stays selected.
+2. **Photo**: tap, shoot. The photo is filed under the current section straight away. No AI. Optional caption underneath.
+3. **Note**: tap, dictate or type, save. Claude rewrites it into report wording (description, condition, recommendations). If that fails, the raw note is kept and flagged.
+4. **Download Word report**: sections in report order, then a Photographic Log sorted by section order (general views first) with numbered captions. A blank caption becomes "View of <section name>".
+
 ## Layout
-- `app/` – phone PWA: dictate/type a note, add photos, optional section pick, list of filed items, Word download
-- `server/sections.js` – the ~30 report sections (from the SM&E sample report)
-- `server/classify.js` – sends note + photos to Claude, returns section, description, condition, recommendations, photo captions
-- `server/export.js` – builds the .docx (sections, recommendations, deficiency table, numbered photo log)
-- `data/` – jobs and photos (git-ignored; client data)
+- `app/` - phone PWA
+- `server/sections.js` - report sections (from the SM&E sample report)
+- `server/classify.js` - Claude call for notes only
+- `server/export.js` - builds the .docx
+- `data/` - jobs and photos
 
 ## Not built yet
 Offline queue, front matter form (property data, interviewees), executive summary text, boilerplate sections,
