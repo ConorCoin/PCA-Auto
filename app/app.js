@@ -1,6 +1,7 @@
 import { SECTIONS, sectionTitle, sectionLabel, groupOf } from "./sections.js";
 import * as db from "./db.js";
 import { buildReport } from "./export.js";
+import { attachPlaceSearch } from "./places.js";
 
 const $ = id => document.getElementById(id);
 const store = {
@@ -76,6 +77,19 @@ $("startjob").onclick = async () => {
   $("jobname").value = ""; $("jobaddr1").value = ""; $("jobaddr2").value = "";
   openJob(j.id);
 };
+
+// Place search: one pick fills the name, street, and city/state/zip used across the whole report.
+attachPlaceSearch($("placesearch"), $("placelist"), pl => {
+  if (pl.name) $("jobname").value = pl.name;
+  $("jobaddr1").value = pl.street;
+  $("jobaddr2").value = pl.cityLine;
+});
+attachPlaceSearch($("edsearch"), $("edlist"), pl => {
+  if (pl.name) $("edname").value = pl.name;
+  $("edaddr1").value = pl.street;
+  $("edaddr2").value = pl.cityLine;
+  $("savedetails").click();
+});
 
 $("savedetails").onclick = async () => {
   job.name = $("edname").value.trim() || job.name;
@@ -256,7 +270,7 @@ $("restore").onchange = async e => {
 
 // ---------- start ----------
 // Shown under More so you can tell which build the phone is running. Keep in step with CACHE in sw.js.
-const VERSION = "v7: full report, recommendation tab, delete assessment";
+const VERSION = "v8: place search";
 $("version").textContent = "App version: " + VERSION;
 
 async function init() {

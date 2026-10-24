@@ -45,6 +45,11 @@
   #setup input[type=text] { width: 100%; box-sizing: border-box; padding: 12px; margin-bottom: 8px; border: 1px solid #bbb; border-radius: 8px; }
   #setup button.job { width: 100%; margin-bottom: 6px; text-align: left; }
   .foot { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 14px; }
+  .suglist { margin: -2px 0 8px; }
+  button.sug { display: block; width: 100%; text-align: left; background: #fff; color: #111; border: 1px solid #bbb; border-radius: 8px; padding: 10px; margin-bottom: 4px; font-size: 15px; }
+  .sug-t { font-weight: 600; }
+  .sug-d { font-size: 13px; color: #555; margin-top: 2px; }
+  .sug-note { font-size: 13px; color: #555; padding: 4px 2px; }
   .block { display: block; width: 100%; margin: 6px 0; }
   [hidden] { display: none !important; }
   details { margin-top: 14px; font-size: 14px; }
@@ -65,6 +70,8 @@
 <div id="setup" hidden>
   <div id="joblist"></div>
   <div class="hint">New assessment. The name and address print under every photo.</div>
+  <input id="placesearch" type="text" placeholder="Search business or address (fills the boxes below)" autocomplete="off">
+  <div id="placelist" class="suglist"></div>
   <input id="jobname" type="text" placeholder="Property name (e.g. Porsche Atlanta Northwest)">
   <input id="jobaddr1" type="text" placeholder="Street address (e.g. 2501 Windy Hill Road SE)">
   <input id="jobaddr2" type="text" placeholder="City, State Zip (e.g. Marietta, GA 30067)">
@@ -104,6 +111,8 @@
     <summary>More</summary>
     <div class="hint" id="version"></div>
     <div class="hint">Property shown under every photo:</div>
+    <input id="edsearch" type="text" placeholder="Search business or address (fills and saves)" autocomplete="off" style="width:100%;padding:10px;margin-bottom:6px;border:1px solid #bbb;border-radius:8px;box-sizing:border-box">
+    <div id="edlist" class="suglist"></div>
     <input id="edname" type="text" placeholder="Property name" style="width:100%;padding:10px;margin-bottom:6px;border:1px solid #bbb;border-radius:8px">
     <input id="edaddr1" type="text" placeholder="Street address" style="width:100%;padding:10px;margin-bottom:6px;border:1px solid #bbb;border-radius:8px">
     <input id="edaddr2" type="text" placeholder="City, State Zip" style="width:100%;padding:10px;margin-bottom:6px;border:1px solid #bbb;border-radius:8px">
