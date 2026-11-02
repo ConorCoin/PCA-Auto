@@ -20,8 +20,8 @@ async function loadLogo() {
 
 function photoBlock(no, caption, it, bytes, job, logo) {
   const { Paragraph, TextRun, ImageRun, AlignmentType, Table, TableRow, TableCell, WidthType, TableLayoutType, VerticalAlign } = docx;
-  const fit = Math.min(PHOTO_MAX_W / (it.w || 4), PHOTO_MAX_H / (it.h || 3));
-  const pw = Math.round((it.w || 4) * fit), ph = Math.round((it.h || 3) * fit);
+  const fit = PHOTO_MAX_W / (it.w || 4);
+  const pw = PHOTO_MAX_W, ph = Math.round((it.h || 3) * fit);
   const cell = (span, children, opts = {}) => new TableCell({
     columnSpan: span, width: { size: span * COL_W, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER,
     margins: { top: 60, bottom: 60, left: 100, right: 100 }, children, ...opts,
@@ -76,7 +76,7 @@ export async function buildReport(job, items) {
   for (const it of photos) {
     no += 1;
     const caption = it.caption || (sectionOf(it) === "photo" ? "View of the property" : `View of ${sectionTitle(sectionOf(it)).toLowerCase()}`);
-    const bytes = new Uint8Array(await it.photo.arrayBuffer());
+    const bytes = it.photo instanceof Uint8Array ? it.photo : new Uint8Array(await it.photo.arrayBuffer());
     photoLog.push(photoBlock(no, caption, it, bytes, job, logo));
     photoLog.push(new Paragraph({ spacing: { after: 160 } }));
   }

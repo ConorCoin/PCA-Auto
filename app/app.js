@@ -2,6 +2,7 @@ import { SECTIONS, sectionTitle, sectionLabel, groupOf } from "./sections.js";
 import * as db from "./db.js";
 import { buildReport } from "./export.js";
 import { attachPlaceSearch } from "./places.js";
+import { GROUPS } from "./fields.js";
 
 const $ = id => document.getElementById(id);
 const store = {
@@ -69,6 +70,7 @@ async function openJob(id) {
   store.set("pca.job", id);
   report = null; $("saveReport").hidden = true;
   await load();
+  loadPropFields();
   showMain();
 }
 
@@ -103,6 +105,49 @@ $("switch").onclick = showSetup;
 
 async function load() { items = await db.jobItems(job.id); renderItems(); }
 
+// ---------- property data form ----------
+// Built once from fields.js GROUPS 1 (Property data) and 2 (Buildings table).
+function buildPropForm() {
+  const container = $("propfields");
+  [GROUPS[1], GROUPS[2]].forEach(group => {
+    const h = document.createElement("div");
+    h.style.cssText = "font-size:13px;font-weight:600;color:#555;margin:12px 0 4px";
+    h.textContent = group.title; container.append(h);
+    group.fields.forEach(f => {
+      const lbl = document.createElement("div");
+      lbl.style.cssText = "font-size:13px;color:#555;margin-bottom:2px";
+      lbl.textContent = f.l; container.append(lbl);
+      const el = f.area ? document.createElement("textarea") : document.createElement("input");
+      if (!f.area) el.type = "text";
+      el.placeholder = f.ph || "";
+      el.dataset.propKey = f.k;
+      el.style.cssText = "width:100%;box-sizing:border-box;padding:8px;margin-bottom:6px;border:1px solid #bbb;border-radius:6px;font-size:15px";
+      if (f.area) el.style.minHeight = "60px";
+      container.append(el);
+    });
+  });
+}
+
+function loadPropFields() {
+  const D = (job && job.details) || {};
+  document.querySelectorAll("[data-prop-key]").forEach(el => {
+    el.value = D[el.dataset.propKey] || "";
+  });
+}
+
+$("saveprop").onclick = async () => {
+  if (!job) return;
+  if (!job.details) job.details = {};
+  document.querySelectorAll("[data-prop-key]").forEach(el => {
+    const v = el.value.trim();
+    if (v) job.details[el.dataset.propKey] = v;
+    else delete job.details[el.dataset.propKey];
+  });
+  await db.putJob(job);
+  dirty();
+  $("status").textContent = "Property data saved.";
+};
+
 // ---------- list ----------
 function renderItems() {
   if (!job) return;
@@ -119,7 +164,9 @@ function renderItems() {
     const d = document.createElement("div"); d.className = "item";
     const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = sectionLabel(sectionOf(it)) + (it.photo ? "" : "  |  " + noteTag(it)); d.append(tag);
     if (it.photo) {
-      const img = document.createElement("img"); const u = URL.createObjectURL(it.photo); urls.push(u); img.src = u; d.append(img);
+      const img = document.createElement("img");
+      const photoBlob = it.photo instanceof Blob ? it.photo : new Blob([it.photo], { type: "image/jpeg" });
+      const u = URL.createObjectURL(photoBlob); urls.push(u); img.src = u; d.append(img);
       const cap = document.createElement("input"); cap.type = "text"; cap.value = it.caption || "";
       cap.placeholder = `Caption (blank = "${sectionOf(it) === "photo" ? "View of the property" : "View of " + sectionTitle(sectionOf(it)).toLowerCase()}")`;
       cap.onchange = async () => { it.caption = cap.value; await db.putItem(it); report = null; $("saveReport").hidden = true; };
@@ -173,7 +220,9 @@ $("cam").onchange = async e => {
   $("status").textContent = "Saving photo…";
   try {
     const { blob, w, h } = await shrink(f);
-    await db.putItem({ id: db.uid(), jobId: job.id, ts: Date.now(), kind: "photo", sectionId: current, caption: "", transcript: "", photo: blob, w, h });
+    // Store as Uint8Array so Safari can read it back after the IDB transaction closes.
+    const photo = new Uint8Array(await blob.arrayBuffer());
+    await db.putItem({ id: db.uid(), jobId: job.id, ts: Date.now(), kind: "photo", sectionId: current, caption: "", transcript: "", photo, w, h });
     $("status").textContent = "Photo saved to " + sectionTitle(current) + ".";
     dirty(); await load();
   } catch (err) { $("status").textContent = "Photo NOT saved: " + err.message + " (take it again)"; }
@@ -182,31 +231,43 @@ $("cam").onchange = async e => {
 // ---------- notes ----------
 // A note is a Description, a Survey Condition statement, or a Recommendation.
 let noteType = "description";
+let recTier = "short";
 const noteTypeOf = it => it.noteType || "description";
 const NO_REC = "No recommended Immediate Needs, Short-Term Needs, or Long-Term Needs were observed or reported at the time of our walk-through.";
 
 function noteTag(it) {
   const t = noteTypeOf(it);
   if (t === "condition") return "Condition";
-  if (t === "rec") return "Recommendation";
+  if (t === "rec") {
+    const tier = it.tier === "immediate" ? "Immediate" : it.tier === "long" ? "Long-Term" : "Short-Term";
+    const cost = it.cost ? "  $" + Number(it.cost).toLocaleString() : "";
+    return `Recommendation  |  ${tier}${cost}`;
+  }
   return "Description";
 }
 
 function syncChips() {
   document.querySelectorAll("[data-type]").forEach(b => b.classList.toggle("on", b.dataset.type === noteType));
+  document.querySelectorAll("[data-tier]").forEach(b => b.classList.toggle("on", b.dataset.tier === recTier));
   $("norec").hidden = noteType !== "rec";
+  $("recfields").hidden = noteType !== "rec";
 }
 document.querySelectorAll("[data-type]").forEach(b => { b.onclick = () => { noteType = b.dataset.type; syncChips(); }; });
+document.querySelectorAll("[data-tier]").forEach(b => { b.onclick = () => { recTier = b.dataset.tier; syncChips(); }; });
 $("norecbtn").onclick = () => { $("text").value = NO_REC; $("text").focus(); };
 
 $("note").onclick = () => { syncChips(); $("notebox").hidden = false; $("text").focus(); };
-$("cancelnote").onclick = () => { $("text").value = ""; $("notebox").hidden = true; };
+$("cancelnote").onclick = () => { $("text").value = ""; $("reccost").value = ""; $("recyear").value = ""; $("notebox").hidden = true; };
 $("savenote").onclick = async () => {
   const t = $("text").value.trim();
   if (!t) return;
   try {
-    await db.putItem({ id: db.uid(), jobId: job.id, ts: Date.now(), kind: "note", sectionId: current, caption: "", transcript: t, photo: null, noteType });
-    $("text").value = ""; $("status").textContent = "Note saved."; // box stays open for the next note; Close hides it
+    const tier = noteType === "rec" ? recTier : undefined;
+    const cost = noteType === "rec" && $("reccost").value !== "" ? Number($("reccost").value) : undefined;
+    const year = noteType === "rec" && $("recyear").value !== "" ? Number($("recyear").value) : undefined;
+    await db.putItem({ id: db.uid(), jobId: job.id, ts: Date.now(), kind: "note", sectionId: current, caption: "", transcript: t, photo: null, noteType, tier, cost, year });
+    $("text").value = ""; $("reccost").value = ""; $("recyear").value = "";
+    $("status").textContent = "Note saved."; // box stays open for next note; Close hides it
     $("text").focus();
     dirty(); await load();
   } catch (err) { $("status").textContent = "Note NOT saved: " + err.message + " (your text is still here)"; }
@@ -243,10 +304,15 @@ $("saveReport").onclick = async () => {
 
 // ---------- backup / restore ----------
 const toDataUrl = blob => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(blob); });
+const photoToDataUrl = async p => {
+  if (!p) return null;
+  const blob = p instanceof Blob ? p : new Blob([p], { type: "image/jpeg" });
+  return toDataUrl(blob);
+};
 
 $("backup").onclick = async () => {
   const out = { version: 1, job, items: [] };
-  for (const it of items) out.items.push({ ...it, photo: it.photo ? await toDataUrl(it.photo) : null });
+  for (const it of items) out.items.push({ ...it, photo: await photoToDataUrl(it.photo) });
   const file = new File([JSON.stringify(out)], `PCA-backup-${job.name.replace(/[^\w-]+/g, "_")}.json`, { type: "application/json" });
   try {
     if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file] });
@@ -261,7 +327,7 @@ $("restore").onchange = async e => {
     const data = JSON.parse(await f.text());
     await db.putJob(data.job);
     for (const it of data.items) {
-      const photo = it.photo ? await (await fetch(it.photo)).blob() : null;
+      const photo = it.photo ? new Uint8Array(await (await fetch(it.photo)).arrayBuffer()) : null;
       await db.putItem({ ...it, photo });
     }
     openJob(data.job.id);
@@ -275,6 +341,7 @@ $("version").textContent = "App version: " + VERSION;
 
 async function init() {
   buildPicker();
+  buildPropForm();
   try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch {}
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
   const last = store.get("pca.job");
