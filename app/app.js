@@ -240,8 +240,7 @@ function noteTag(it) {
   if (t === "condition") return "Condition";
   if (t === "rec") {
     const tier = it.tier === "immediate" ? "Immediate" : it.tier === "long" ? "Long-Term" : "Short-Term";
-    const cost = it.cost ? "  $" + Number(it.cost).toLocaleString() : "";
-    return `Recommendation  |  ${tier}${cost}`;
+    return `Recommendation  |  ${tier}`;
   }
   return "Description";
 }
@@ -257,16 +256,14 @@ document.querySelectorAll("[data-tier]").forEach(b => { b.onclick = () => { recT
 $("norecbtn").onclick = () => { $("text").value = NO_REC; $("text").focus(); };
 
 $("note").onclick = () => { syncChips(); $("notebox").hidden = false; $("text").focus(); };
-$("cancelnote").onclick = () => { $("text").value = ""; $("reccost").value = ""; $("recyear").value = ""; $("notebox").hidden = true; };
+$("cancelnote").onclick = () => { $("text").value = ""; $("notebox").hidden = true; };
 $("savenote").onclick = async () => {
   const t = $("text").value.trim();
   if (!t) return;
   try {
     const tier = noteType === "rec" ? recTier : undefined;
-    const cost = noteType === "rec" && $("reccost").value !== "" ? Number($("reccost").value) : undefined;
-    const year = noteType === "rec" && $("recyear").value !== "" ? Number($("recyear").value) : undefined;
-    await db.putItem({ id: db.uid(), jobId: job.id, ts: Date.now(), kind: "note", sectionId: current, caption: "", transcript: t, photo: null, noteType, tier, cost, year });
-    $("text").value = ""; $("reccost").value = ""; $("recyear").value = "";
+    await db.putItem({ id: db.uid(), jobId: job.id, ts: Date.now(), kind: "note", sectionId: current, caption: "", transcript: t, photo: null, noteType, tier });
+    $("text").value = "";
     $("status").textContent = "Note saved."; // box stays open for next note; Close hides it
     $("text").focus();
     dirty(); await load();
