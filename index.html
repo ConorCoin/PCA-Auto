@@ -96,6 +96,18 @@
       <button id="norecbtn" class="alt small">No recommendation</button>
     </div>
     <textarea id="text" placeholder="Type, or tap the microphone on your keyboard to talk"></textarea>
+    <div id="recfields" hidden style="margin-top:8px">
+      <div class="hint">Timing:</div>
+      <div class="row" id="tiers">
+        <button class="chip small" data-tier="immediate">Immediate</button>
+        <button class="chip small" data-tier="short">Short-Term</button>
+        <button class="chip small" data-tier="long">Long-Term</button>
+      </div>
+      <div class="row" style="margin-top:6px;gap:6px">
+        <input id="reccost" type="number" min="0" step="100" placeholder="Cost ($)" style="flex:1;min-width:0;padding:8px;border:1px solid #bbb;border-radius:6px;font-size:15px;box-sizing:border-box">
+        <input id="recyear" type="number" min="0" max="20" placeholder="Year (e.g. 2)" style="width:110px;padding:8px;border:1px solid #bbb;border-radius:6px;font-size:15px;box-sizing:border-box">
+      </div>
+    </div>
     <div class="hint">To dictate: tap the microphone key on your phone keyboard.</div>
     <div class="row">
       <button id="savenote">Save note</button>
@@ -118,7 +130,12 @@
     <input id="edaddr2" type="text" placeholder="City, State Zip" style="width:100%;padding:10px;margin-bottom:6px;border:1px solid #bbb;border-radius:8px">
     <button id="savedetails" class="alt block">Save property details</button>
     <button id="switch" class="alt block">Switch or start another assessment</button>
-    <button id="backup" class="alt block">Save a backup file</button>
+    <details style="margin-top:14px">
+      <summary>Property data</summary>
+      <div id="propfields"></div>
+      <button id="saveprop" class="alt block" style="margin-top:8px">Save property data</button>
+    </details>
+    <button id="backup" class="alt block" style="margin-top:14px">Save a backup file</button>
     <label class="btn alt block">Restore from backup file
       <input id="restore" type="file" accept="application/json,.json" hidden>
     </label>
