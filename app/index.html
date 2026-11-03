@@ -86,26 +86,15 @@
     <button id="note" class="alt big">Note</button>
   </div>
   <div id="notebox" hidden>
-    <div class="hint">This note is the:</div>
-    <div class="row" id="types">
-      <button class="chip small" data-type="description">Description</button>
-      <button class="chip small" data-type="condition">Condition</button>
-      <button class="chip small" data-type="rec">Recommendation</button>
+    <textarea id="text" placeholder="Dictate or type your field observation"></textarea>
+    <div class="hint">Tap the microphone key on your keyboard to dictate.</div>
+    <div id="polishresult" hidden style="display:flex;align-items:center;gap:8px;margin-top:4px">
+      <span id="detectedtype" class="tag"></span>
+      <button id="undo" class="alt small">Undo</button>
     </div>
-    <div class="row" id="norec" style="margin-top:6px" hidden>
-      <button id="norecbtn" class="alt small">No recommendation</button>
-    </div>
-    <textarea id="text" placeholder="Type, or tap the microphone on your keyboard to talk"></textarea>
-    <div id="recfields" hidden style="margin-top:8px">
-      <div class="hint">Timing:</div>
-      <div class="row" id="tiers">
-        <button class="chip small" data-tier="immediate">Immediate</button>
-        <button class="chip small" data-tier="short">Short-Term</button>
-        <button class="chip small" data-tier="long">Long-Term</button>
-      </div>
-    </div>
-    <div class="hint">To dictate: tap the microphone key on your phone keyboard.</div>
     <button id="polish" class="alt block" style="margin-top:8px">Polish with AI</button>
+    <button id="split" class="alt block">Split into notes</button>
+    <div id="splitpreview" hidden style="margin-top:8px"></div>
     <div class="row" style="margin-top:6px">
       <button id="savenote">Save note</button>
       <button id="cancelnote" class="alt">Close</button>

@@ -3,7 +3,7 @@ import * as db from "./db.js";
 import { buildReport } from "./export.js";
 import { attachPlaceSearch } from "./places.js";
 import { GROUPS } from "./fields.js";
-import { polishNote } from "./ai.js";
+import { polishNote, splitNote } from "./ai.js";
 
 const $ = id => document.getElementById(id);
 const store = {
@@ -243,11 +243,10 @@ $("cam").onchange = async e => {
 };
 
 // ---------- notes ----------
-// A note is a Description, a Survey Condition statement, or a Recommendation.
-let noteType = "description";
+let noteType = "description"; // set by polish; default for unpolished saves
 let recTier = "short";
+let prePolishText = "";
 const noteTypeOf = it => it.noteType || "description";
-const NO_REC = "No recommended Immediate Needs, Short-Term Needs, or Long-Term Needs were observed or reported at the time of our walk-through.";
 
 function noteTag(it) {
   const t = noteTypeOf(it);
@@ -259,28 +258,36 @@ function noteTag(it) {
   return "Description";
 }
 
-function syncChips() {
-  document.querySelectorAll("[data-type]").forEach(b => b.classList.toggle("on", b.dataset.type === noteType));
-  document.querySelectorAll("[data-tier]").forEach(b => b.classList.toggle("on", b.dataset.tier === recTier));
-  $("norec").hidden = noteType !== "rec";
-  $("recfields").hidden = noteType !== "rec";
+function resetNoteBox() {
+  $("text").value = "";
+  $("splitpreview").hidden = true;
+  $("polishresult").hidden = true;
+  noteType = "description"; recTier = "short"; prePolishText = "";
 }
-document.querySelectorAll("[data-type]").forEach(b => { b.onclick = () => { noteType = b.dataset.type; syncChips(); }; });
-document.querySelectorAll("[data-tier]").forEach(b => { b.onclick = () => { recTier = b.dataset.tier; syncChips(); }; });
-$("norecbtn").onclick = () => { $("text").value = NO_REC; $("text").focus(); };
 
-$("note").onclick = () => { syncChips(); $("notebox").hidden = false; $("text").focus(); };
-$("cancelnote").onclick = () => { $("text").value = ""; $("notebox").hidden = true; };
+$("note").onclick = () => { $("notebox").hidden = false; $("text").focus(); };
+$("cancelnote").onclick = () => { resetNoteBox(); $("notebox").hidden = true; };
+function typeLabel(type, tier) {
+  const name = type === "rec" ? "Recommendation" : type === "condition" ? "Condition" : "Description";
+  const t = type === "rec" ? ` — ${tier === "immediate" ? "Immediate" : tier === "long" ? "Long-Term" : "Short-Term"}` : "";
+  return name + t;
+}
+
 $("polish").onclick = async () => {
   const t = $("text").value.trim();
   if (!t) return;
   $("polish").disabled = true;
   $("polish").textContent = "Working…";
   $("status").textContent = "";
+  $("splitpreview").hidden = true;
   try {
-    const result = await polishNote(t, noteType, recTier, sectionTitle(current));
-    $("text").value = result;
-    $("status").textContent = "Polished.";
+    prePolishText = t;
+    const result = await polishNote(t, sectionTitle(current));
+    noteType = result.type;
+    recTier = result.tier || "short";
+    $("text").value = result.text;
+    $("detectedtype").textContent = typeLabel(result.type, result.tier);
+    $("polishresult").hidden = false;
   } catch (err) {
     $("status").textContent = err.message === "no-key"
       ? "No API key — add one in More → AI (Polish)."
@@ -290,13 +297,74 @@ $("polish").onclick = async () => {
     $("polish").textContent = "Polish with AI";
   }
 };
+
+$("undo").onclick = () => {
+  if (!prePolishText) return;
+  $("text").value = prePolishText;
+  $("polishresult").hidden = true;
+  noteType = "description"; recTier = "short"; prePolishText = "";
+};
+
+$("split").onclick = async () => {
+  const t = $("text").value.trim();
+  if (!t) return;
+  $("split").disabled = true;
+  $("split").textContent = "Splitting…";
+  $("status").textContent = "";
+  $("polishresult").hidden = true;
+  try {
+    const results = await splitNote(t, sectionTitle(current));
+    const preview = $("splitpreview");
+    preview.replaceChildren();
+    results.forEach(note => {
+      const wrap = document.createElement("div");
+      wrap.style.cssText = "border:1px solid #bbb;border-radius:8px;padding:8px;margin-bottom:6px";
+      const tag = document.createElement("span");
+      tag.className = "tag"; tag.style.cssText = "display:block;margin-bottom:4px";
+      tag.textContent = typeLabel(note.type, note.tier);
+      const ta = document.createElement("textarea");
+      ta.style.cssText = "width:100%;box-sizing:border-box;min-height:60px;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:15px;margin-top:4px;resize:vertical";
+      ta.value = note.text;
+      ta.dataset.noteType = note.type;
+      ta.dataset.noteTier = note.tier || "";
+      wrap.append(tag, ta);
+      preview.append(wrap);
+    });
+    const saveAll = document.createElement("button");
+    saveAll.textContent = `Save all ${results.length} notes`;
+    saveAll.style.cssText = "width:100%;margin-top:4px;padding:14px;background:var(--g);color:#fff;border:0;border-radius:10px;font-size:17px;cursor:pointer";
+    saveAll.onclick = async () => {
+      let saved = 0;
+      for (const ta of preview.querySelectorAll("textarea")) {
+        const text = ta.value.trim();
+        if (!text) continue;
+        await db.putItem({ id: db.uid(), jobId: job.id, ts: Date.now(), kind: "note", sectionId: current, caption: "", transcript: text, photo: null, noteType: ta.dataset.noteType, tier: ta.dataset.noteTier || undefined });
+        saved++;
+      }
+      resetNoteBox();
+      $("status").textContent = `${saved} note${saved === 1 ? "" : "s"} saved.`;
+      $("text").focus();
+      dirty(); await load();
+    };
+    preview.append(saveAll);
+    preview.hidden = false;
+  } catch (err) {
+    $("status").textContent = err.message === "no-key"
+      ? "No API key — add one in More → AI (Polish)."
+      : "Split failed: " + err.message;
+  } finally {
+    $("split").disabled = false;
+    $("split").textContent = "Split into notes";
+  }
+};
+
 $("savenote").onclick = async () => {
   const t = $("text").value.trim();
   if (!t) return;
   try {
     const tier = noteType === "rec" ? recTier : undefined;
     await db.putItem({ id: db.uid(), jobId: job.id, ts: Date.now(), kind: "note", sectionId: current, caption: "", transcript: t, photo: null, noteType, tier });
-    $("text").value = "";
+    resetNoteBox();
     $("status").textContent = "Note saved."; // box stays open for next note; Close hides it
     $("text").focus();
     dirty(); await load();
