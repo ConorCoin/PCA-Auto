@@ -3,7 +3,7 @@ import * as db from "./db.js";
 import { buildReport } from "./export.js";
 import { attachPlaceSearch } from "./places.js";
 import { GROUPS } from "./fields.js";
-import { polishNote, splitNote } from "./ai.js";
+import { splitNote } from "./ai.js";
 
 const $ = id => document.getElementById(id);
 const store = {
@@ -243,9 +243,8 @@ $("cam").onchange = async e => {
 };
 
 // ---------- notes ----------
-let noteType = "description"; // set by polish; default for unpolished saves
+let noteType = "description";
 let recTier = "short";
-let prePolishText = "";
 const noteTypeOf = it => it.noteType || "description";
 
 function noteTag(it) {
@@ -261,8 +260,7 @@ function noteTag(it) {
 function resetNoteBox() {
   $("text").value = "";
   $("splitpreview").hidden = true;
-  $("polishresult").hidden = true;
-  noteType = "description"; recTier = "short"; prePolishText = "";
+  noteType = "description"; recTier = "short";
 }
 
 $("note").onclick = () => { $("notebox").hidden = false; $("text").focus(); };
@@ -273,45 +271,12 @@ function typeLabel(type, tier) {
   return name + t;
 }
 
-$("polish").onclick = async () => {
-  const t = $("text").value.trim();
-  if (!t) return;
-  $("polish").disabled = true;
-  $("polish").textContent = "Working…";
-  $("status").textContent = "";
-  $("splitpreview").hidden = true;
-  try {
-    prePolishText = t;
-    const result = await polishNote(t, sectionTitle(current));
-    noteType = result.type;
-    recTier = result.tier || "short";
-    $("text").value = result.text;
-    $("detectedtype").textContent = typeLabel(result.type, result.tier);
-    $("polishresult").hidden = false;
-  } catch (err) {
-    $("status").textContent = err.message === "no-key"
-      ? "No API key — add one in More → AI (Polish)."
-      : "Polish failed: " + err.message;
-  } finally {
-    $("polish").disabled = false;
-    $("polish").textContent = "Polish with AI";
-  }
-};
-
-$("undo").onclick = () => {
-  if (!prePolishText) return;
-  $("text").value = prePolishText;
-  $("polishresult").hidden = true;
-  noteType = "description"; recTier = "short"; prePolishText = "";
-};
-
 $("split").onclick = async () => {
   const t = $("text").value.trim();
   if (!t) return;
   $("split").disabled = true;
-  $("split").textContent = "Splitting…";
+  $("split").textContent = "Working…";
   $("status").textContent = "";
-  $("polishresult").hidden = true;
   try {
     const results = await splitNote(t, sectionTitle(current));
     const preview = $("splitpreview");
@@ -350,11 +315,11 @@ $("split").onclick = async () => {
     preview.hidden = false;
   } catch (err) {
     $("status").textContent = err.message === "no-key"
-      ? "No API key — add one in More → AI (Polish)."
-      : "Split failed: " + err.message;
+      ? "No API key — add one in More → AI."
+      : "AI failed: " + err.message;
   } finally {
     $("split").disabled = false;
-    $("split").textContent = "Split into notes";
+    $("split").textContent = "AI";
   }
 };
 
