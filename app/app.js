@@ -245,6 +245,7 @@ $("cam").onchange = async e => {
 // ---------- notes ----------
 let noteType = "description";
 let recTier = "short";
+let preAiText = "";
 const noteTypeOf = it => it.noteType || "description";
 
 function noteTag(it) {
@@ -260,7 +261,8 @@ function noteTag(it) {
 function resetNoteBox() {
   $("text").value = "";
   $("splitpreview").hidden = true;
-  noteType = "description"; recTier = "short";
+  $("undo").hidden = true;
+  noteType = "description"; recTier = "short"; preAiText = "";
 }
 
 $("note").onclick = () => { $("notebox").hidden = false; $("text").focus(); };
@@ -271,12 +273,20 @@ function typeLabel(type, tier) {
   return name + t;
 }
 
+$("undo").onclick = () => {
+  $("text").value = preAiText;
+  $("splitpreview").hidden = true;
+  $("undo").hidden = true;
+  preAiText = "";
+};
+
 $("split").onclick = async () => {
   const t = $("text").value.trim();
   if (!t) return;
   $("split").disabled = true;
   $("split").textContent = "Working…";
   $("status").textContent = "";
+  preAiText = t;
   try {
     const results = await splitNote(t, sectionTitle(current));
     const preview = $("splitpreview");
@@ -313,6 +323,7 @@ $("split").onclick = async () => {
     };
     preview.append(saveAll);
     preview.hidden = false;
+    $("undo").hidden = false;
   } catch (err) {
     $("status").textContent = err.message === "no-key"
       ? "No API key — add one in More → AI."
