@@ -105,7 +105,8 @@
       </div>
     </div>
     <div class="hint">To dictate: tap the microphone key on your phone keyboard.</div>
-    <div class="row">
+    <button id="polish" class="alt block" style="margin-top:8px">Polish with AI</button>
+    <div class="row" style="margin-top:6px">
       <button id="savenote">Save note</button>
       <button id="cancelnote" class="alt">Close</button>
     </div>
@@ -130,6 +131,12 @@
       <summary>Property data</summary>
       <div id="propfields"></div>
       <button id="saveprop" class="alt block" style="margin-top:8px">Save property data</button>
+    </details>
+    <details style="margin-top:14px">
+      <summary>AI (Polish)</summary>
+      <div class="hint" style="margin-top:6px">Claude API key — get one at console.anthropic.com</div>
+      <input id="apikey" type="password" placeholder="sk-ant-api03-..." style="width:100%;box-sizing:border-box;padding:10px;margin:6px 0;border:1px solid #bbb;border-radius:8px;font-family:monospace;font-size:13px">
+      <button id="savekey" class="alt block">Save key</button>
     </details>
     <button id="backup" class="alt block" style="margin-top:14px">Save a backup file</button>
     <label class="btn alt block">Restore from backup file

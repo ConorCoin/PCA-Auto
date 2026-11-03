@@ -3,6 +3,7 @@ import * as db from "./db.js";
 import { buildReport } from "./export.js";
 import { attachPlaceSearch } from "./places.js";
 import { GROUPS } from "./fields.js";
+import { polishNote } from "./ai.js";
 
 const $ = id => document.getElementById(id);
 const store = {
@@ -148,6 +149,19 @@ $("saveprop").onclick = async () => {
   $("status").textContent = "Property data saved.";
 };
 
+// ---------- AI key ----------
+$("savekey").onclick = () => {
+  const k = $("apikey").value.trim();
+  if (!k || k.startsWith("•")) return;
+  localStorage.setItem("pca.apikey", k);
+  $("apikey").value = "";
+  $("apikey").placeholder = "Key saved — enter a new key to replace";
+  $("status").textContent = "API key saved.";
+};
+if (localStorage.getItem("pca.apikey")) {
+  $("apikey").placeholder = "Key saved — enter a new key to replace";
+}
+
 // ---------- list ----------
 function renderItems() {
   if (!job) return;
@@ -257,6 +271,25 @@ $("norecbtn").onclick = () => { $("text").value = NO_REC; $("text").focus(); };
 
 $("note").onclick = () => { syncChips(); $("notebox").hidden = false; $("text").focus(); };
 $("cancelnote").onclick = () => { $("text").value = ""; $("notebox").hidden = true; };
+$("polish").onclick = async () => {
+  const t = $("text").value.trim();
+  if (!t) return;
+  $("polish").disabled = true;
+  $("polish").textContent = "Working…";
+  $("status").textContent = "";
+  try {
+    const result = await polishNote(t, noteType, recTier, sectionTitle(current));
+    $("text").value = result;
+    $("status").textContent = "Polished.";
+  } catch (err) {
+    $("status").textContent = err.message === "no-key"
+      ? "No API key — add one in More → AI (Polish)."
+      : "Polish failed: " + err.message;
+  } finally {
+    $("polish").disabled = false;
+    $("polish").textContent = "Polish with AI";
+  }
+};
 $("savenote").onclick = async () => {
   const t = $("text").value.trim();
   if (!t) return;
