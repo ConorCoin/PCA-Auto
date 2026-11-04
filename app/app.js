@@ -308,7 +308,7 @@ $("split").onclick = async () => {
       preview.append(wrap);
     });
     const saveAll = document.createElement("button");
-    saveAll.textContent = `Save all ${notes.length} notes`;
+    saveAll.textContent = notes.length === 1 ? "Save note" : `Save all ${notes.length} notes`;
     saveAll.style.cssText = "width:100%;margin-top:4px;padding:14px;background:var(--g);color:#fff;border:0;border-radius:10px;font-size:17px;cursor:pointer";
     saveAll.onclick = async () => {
       let saved = 0;

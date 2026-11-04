@@ -61,12 +61,12 @@ OUTPUT FORMAT: Return only a JSON object — no markdown, no code fences:
 {"type":"description|condition|rec","tier":"immediate|short|long|null","text":"rewritten note"}
 tier must be null for description and condition notes.`;
 
-const SPLIT_PROMPT = BASE_PROMPT + `
+const AI_PROMPT = BASE_PROMPT + `
 
-SPLIT MODE: The user provides a full field observation and a list of report sections. Identify which section best matches the content, then split the observation into separate Description, Condition, and/or Recommendation notes.
+TASK: The user provides a field observation and a list of report sections. Identify the best-matching section, then produce one note per distinct aspect present — a Description if they described the system, a Condition if they assessed its state, a Recommendation if they called for action. Most observations will produce only one note. Only produce multiple notes when the observation genuinely covers more than one aspect.
 OUTPUT FORMAT: Return only a JSON object — no markdown, no code fences:
 {"section":"<id from the provided list>","notes":[{"type":"description|condition|rec","tier":"immediate|short|long|null","text":"..."}]}
-Only include note types present in the observation. tier is null for non-recommendation notes.`;
+tier is null for description and condition notes.`;
 
 function parseJSON(raw) {
   return JSON.parse(raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim());
@@ -104,6 +104,6 @@ export async function polishNote(text, sectionName) {
 
 export async function splitNote(text, sections) {
   const sectionList = sections.map(s => `${s.id}: ${s.title}`).join("\n");
-  const raw = await apiCall(SPLIT_PROMPT, `Available sections:\n${sectionList}\n\nField notes: "${text}"`, 800);
+  const raw = await apiCall(AI_PROMPT, `Available sections:\n${sectionList}\n\nField notes: "${text}"`, 800);
   return parseJSON(raw); // {section, notes: [{type, tier, text}, ...]}
 }
