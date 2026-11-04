@@ -95,6 +95,125 @@ export const LIMITATIONS_11 = [
   "This report presents an evaluation of the accessibility of the subject property as specified in the engagement agreement. This report does not present an audit of all components specified in federal, state or local accessibility regulations. Instead, this review observed general design components such as routes of travel, door hardware, plumbing amenities, elevator controls and signals, basic emergency alarm components and signage. This report is not a comprehensive Americans with Disabilities Act review.",
 ];
 
+const NO_RECS = "No recommended Immediate Needs, Short-Term Needs, or Long-Term Needs were observed or reported at the time of our walk-through.";
+
+// Red-text defaults for each report section.
+// desc/cond: prepended in red before the assessor's notes in the same paragraph.
+// rec: shown in red only when the assessor has no rec notes for that section.
+export const SECTION_DEFAULTS = {
+  "3.1": { desc: null, cond: null, rec: NO_RECS },
+  "3.2.1": { desc: null, cond: null, rec: NO_RECS },
+  "3.2.2": {
+    desc: null,
+    cond: "The storm water drainage systems appear to be in good condition.",
+    rec: NO_RECS,
+  },
+  "3.2.3": {
+    desc: null,
+    cond: "Site access appears to be adequate for the site's intended use. No issues regarding ingress/egress were observed or reported to SM&E.",
+    rec: NO_RECS,
+  },
+  "3.2.4": {
+    desc: "Concrete curbs were observed on the perimeter of property and landscaped islands.",
+    cond: "The asphalt and concrete pavement on the property appeared to be in fair condition. It did not appear that the pavement had received maintenance recently, greater than 5 years. SM&E generally recommends cleaning, seal coating and striping pavement on a five-year schedule. Based on the assumed age and observed condition, SM&E has included an allowance to apply seal coating and striping the asphalt pavement during the term.",
+    rec: "Allowance to clean, seal coat, and stripe asphalt. (Years 1 and 6)",
+  },
+  "3.2.5": { desc: null, cond: null, rec: NO_RECS },
+  "3.2.6": {
+    desc: "Landscape vegetation consists of grass, trees, shrubs, and mulch within the parking area islands and perimeter areas of the property.",
+    cond: "Landscaping appeared to be in good condition, requiring routine maintenance during the term. All landscaping is handled by a third party.",
+    rec: NO_RECS,
+  },
+  "3.2.7": {
+    desc: "No retaining walls are present on the property.",
+    cond: null,
+    rec: NO_RECS,
+  },
+  "3.2.8": { desc: null, cond: null, rec: NO_RECS },
+  "3.2.9": {
+    desc: "No perimeter walls, gates or fences were present on the property.",
+    cond: null,
+    rec: NO_RECS,
+  },
+  "3.2.10": {
+    desc: "Recreational facilities and additional site amenities are not present.",
+    cond: null,
+    rec: NO_RECS,
+  },
+  "3.2.11": {
+    desc: "Special utility systems are not present. It should be noted that hydraulic lifts and other automotive related servicing equipment are present at the site but are not included in the PCA ASTM standards.",
+    cond: null,
+    rec: NO_RECS,
+  },
+  "3.2.12": {
+    desc: null,
+    cond: "No issues or service deficiencies were reported. Routine maintenance is anticipated during the evaluation period.",
+    rec: NO_RECS,
+  },
+  "4.1": {
+    desc: null,
+    cond: null,
+    rec: NO_RECS + " Normal monitoring of the foundation is anticipated during the evaluation period.",
+  },
+  "4.2": {
+    desc: null,
+    cond: "The structural systems for the buildings appear to be in good condition and are free of visual signs of deficiency. No issues regarding the building structure were observed or reported to SM&E during our walkthrough.",
+    rec: NO_RECS + " Normal monitoring of the building frame is anticipated during the evaluation period.",
+  },
+  "4.3.1": {
+    desc: "Exterior walls on the building consist of decorative metal panels, corrugated metal panels, concrete masonry unit (CMU) block and exterior insulated finishing systems (EIFS).",
+    cond: "The exterior finishes of the buildings on the property are in good condition. The paint on most of the exterior painted surfaces are in fair condition. SM&E generally recommends cleaning and painting exterior paintable surfaces on a 5-year basis. SM&E has included an allowance for the cleaning of the exterior surfaces during the term.",
+    rec: "Allowance to clean and paint exterior surfaces (22,450 SF) (Year 1)\nAllowance to clean and paint exterior paintable surfaces (22,450 SF) (Year 6)",
+  },
+  "4.3.2": {
+    desc: "Windows are limited to in-operable, metal-framed dual-pane glass windows. The public entrances are provided with aluminum and glass, storefront type, manual opening doors. Service doors consist of hollow-core steel doors set in concrete.",
+    cond: "Doors and windows appear to be in good condition. The automatic high bay and manual roll-up doors are in good condition and appeared operational at the time of the walk-through. The exterior door and window sealants appear to be in fair condition. SM&E generally recommends replacing exterior door and window sealants on a 5-year basis. SM&E has included an allowance to replace the exterior sealants on the building.",
+    rec: "Allowance to replace exterior sealants (1,500 LF) (Years 1 & 6)",
+  },
+  "4.4.1": { desc: null, cond: null, rec: NO_RECS },
+  "5.1": {
+    desc: "It appears that typical supply piping for domestic water is copper. Sanitary lines and ventilation conduits are PVC. Underground sanitary lines were not directly observed but are believed to be PVC. The plumbing fixtures for restroom areas are of typical commercial grade vitreous China.",
+    cond: null,
+    rec: NO_RECS,
+  },
+  "5.2": { desc: null, cond: null, rec: NO_RECS },
+  "5.3": {
+    desc: "Breaker panels range in size from 120–200 amps. Branch wiring is copper but was not verified.",
+    cond: "The electrical systems appear to be in good condition and appear adequate for the site's present use. Management reported no known problems. Switchgear and power distribution panels typically have an EUL of 40 years. Based on the age, the electrical systems will last throughout the term.",
+    rec: NO_RECS,
+  },
+  "5.4": {
+    desc: "The lighting throughout the interior of the buildings consist of LED fixtures. The exterior areas utilize building and pole mounted and wall mounted LED fixtures.",
+    cond: "The lighting appeared sufficient for the buildings and parking lots.",
+    rec: NO_RECS,
+  },
+  "5.5": {
+    desc: null,
+    cond: "The elevator system appears to be in good condition. The cab finish was in good condition. Based on the observed condition and EUL for modernization of 25 years, SM&E does not anticipate the modernization during the term.",
+    rec: NO_RECS,
+  },
+  "5.6.1": {
+    desc: "Exit signs and emergency lighting marked the emergency exits. Smoke detectors, pull stations, as well as audible and visible alarms are located throughout the building. Life safety systems are reportedly hard wired, and battery backed up. The dealership building utilizes a wet-type automatic fire suppression (sprinkler) system.",
+    cond: "The life safety systems appeared to be in good condition. No deficiencies were reported during our site visit. Based on the observed condition, SM&E anticipates the life safety components to last throughout the term.",
+    rec: NO_RECS,
+  },
+  "6.1": {
+    desc: "The interior of the buildings included ceramic and natural stone tile, carpet, exposed concrete, and vinyl composite tile (VCT) flooring, with finished gypsum, CMU block, and corrugated panel walls, with conventional acoustic ceiling tiles and exposed roof decking.",
+    cond: "Overall, the interior finishes in the building were observed to be in good condition.",
+    rec: NO_RECS,
+  },
+  "7.1": {
+    desc: null,
+    cond: "To the extent of our assessment, the property does appear to be fully compliant with current ADA requirements for handicap accessibility. The customer parking area did appear to be ADA compliant, having the required number of handicap spaces provided based on the number of public spaces observed during the site visit. The customer public and service restrooms appeared to be generally ADA compliant.",
+    rec: NO_RECS,
+  },
+  "8": {
+    desc: null,
+    cond: "During the inspection, no precipitation was occurring, so water intrusion could not be observed. No water staining was observed on the ceiling tiles in the building.",
+    rec: NO_RECS,
+  },
+};
+
 export const ACRONYMS = [
   ["AC", "Air Conditioning"], ["ADA", "Americans with Disabilities Act"], ["AHU", "Air Handling Unit"], ["amp", "Ampere"],
   ["BMS", "Building Management System"], ["BTU", "British Thermal Unit"], ["BUR", "Built-up Roof"], ["CFM", "Cubic Feet Per Minute"],
