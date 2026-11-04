@@ -100,6 +100,30 @@
   <div class="foot"><label><input id="onlyhere" type="checkbox" checked> Only this section</label></div>
   <button id="prep" class="alt block">Prepare Word report</button>
   <button id="saveReport" class="block" hidden>Save report</button>
+  <!-- HVAC unit table: visible only when section 5.2 is active -->
+  <div id="hvacpanel" hidden style="margin:8px 0">
+    <div style="font-weight:600;font-size:15px;margin:8px 0 6px">HVAC Units</div>
+    <div id="hvactable" style="margin-bottom:8px"></div>
+    <div style="border:1px solid #bbb;border-radius:8px;padding:10px;margin-bottom:8px">
+      <div style="font-size:13px;color:#555;margin-bottom:8px">Add a unit:</div>
+      <div class="row" style="flex-wrap:wrap;gap:6px;margin-bottom:8px">
+        <select id="hvactype" style="padding:8px;border:1px solid #bbb;border-radius:6px;font-size:15px;flex:1;min-width:130px">
+          <option value="RTU">RTU</option>
+          <option value="Split">Split System</option>
+          <option value="Mini-Split">Mini-Split</option>
+          <option value="Heater-Radiant">Heater (Radiant)</option>
+          <option value="Heater-Tube">Heater (Tube)</option>
+        </select>
+        <input id="hvacmfr" type="text" placeholder="Manufacturer" style="flex:1;min-width:110px;padding:8px;border:1px solid #bbb;border-radius:6px;font-size:15px">
+        <input id="hvacyear" type="number" placeholder="Year" style="width:82px;padding:8px;border:1px solid #bbb;border-radius:6px;font-size:15px">
+        <input id="hvacsize" type="number" step="0.5" placeholder="Tons" style="width:76px;padding:8px;border:1px solid #bbb;border-radius:6px;font-size:15px">
+        <input id="hvacrefrig" type="text" placeholder="Refrigerant" value="R-410A" style="width:106px;padding:8px;border:1px solid #bbb;border-radius:6px;font-size:15px">
+        <input id="hvacbldg" type="text" placeholder="Building (optional)" style="flex:1;min-width:140px;padding:8px;border:1px solid #bbb;border-radius:6px;font-size:15px">
+      </div>
+      <button id="addunit" class="alt block" style="margin:0">Add unit</button>
+    </div>
+    <button id="genhvac" class="alt block">Generate HVAC notes</button>
+  </div>
   <div id="items"></div>
   <details>
     <summary>More</summary>

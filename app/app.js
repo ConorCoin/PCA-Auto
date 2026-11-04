@@ -33,14 +33,23 @@ function buildPicker() {
   current = SECTIONS.some(s => s.id === saved) ? saved : SECTIONS[0].id;
   sel.value = current;
 }
-function setSection(id) { current = id; $("section").value = id; store.set("pca.section", id); renderItems(); }
+function setSection(id) {
+  current = id; $("section").value = id; store.set("pca.section", id);
+  $("hvacpanel").hidden = (id !== "5.2");
+  if (id === "5.2") renderHvacTable();
+  renderItems();
+}
 $("section").onchange = e => setSection(e.target.value);
 $("prev").onclick = () => { const i = SECTIONS.findIndex(s => s.id === current); if (i > 0) setSection(SECTIONS[i - 1].id); };
 $("next").onclick = () => { const i = SECTIONS.findIndex(s => s.id === current); if (i < SECTIONS.length - 1) setSection(SECTIONS[i + 1].id); };
 $("onlyhere").onchange = renderItems;
 
 // ---------- screens ----------
-function showMain() { $("setup").hidden = true; $("main").hidden = false; $("bar").hidden = false; }
+function showMain() {
+  $("setup").hidden = true; $("main").hidden = false; $("bar").hidden = false;
+  $("hvacpanel").hidden = (current !== "5.2");
+  if (current === "5.2") renderHvacTable();
+}
 
 async function showSetup() {
   $("main").hidden = true; $("bar").hidden = true; $("setup").hidden = false;
@@ -288,7 +297,11 @@ $("split").onclick = async () => {
   $("status").textContent = "";
   preAiText = t;
   try {
-    const { section: detectedId, notes } = await splitNote(t, SECTIONS.filter(s => s.id !== "photo"));
+    const { section: detectedId, notes } = await splitNote(t, SECTIONS.filter(s => s.id !== "photo"), {
+      name: job.name,
+      address: [job.address1, job.address2].filter(Boolean).join(", "),
+      client: (job.details && job.details.clientCompany) || "",
+    });
     const validSection = SECTIONS.find(s => s.id === detectedId);
     if (validSection && detectedId !== current) setSection(detectedId);
     const preview = $("splitpreview");
@@ -410,9 +423,163 @@ $("restore").onchange = async e => {
   } catch (err) { alert("Could not restore that file: " + err.message); }
 };
 
+// ---------- HVAC table ----------
+const ONES = ["zero","one","two","three","four","five","six","seven","eight","nine","ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen","twenty","twenty-one","twenty-two","twenty-three","twenty-four","twenty-five","twenty-six","twenty-seven","twenty-eight","twenty-nine"];
+const TENS = ["","","twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety"];
+function toWords(n) {
+  if (n < 30) return ONES[n] || String(n);
+  if (n < 100) { const t = Math.floor(n/10), o = n%10; return TENS[t] + (o ? "-" + ONES[o] : ""); }
+  return String(n);
+}
+function numPair(n) { return `${toWords(n)} (${n})`; }
+function listAnd(arr) {
+  if (!arr.length) return "";
+  if (arr.length === 1) return arr[0];
+  if (arr.length === 2) return arr[0] + " and " + arr[1];
+  return arr.slice(0,-1).join(", ") + ", and " + arr[arr.length-1];
+}
+
+function generateHvacDesc(units) {
+  const cooling = units.filter(u => ["RTU","Split","Mini-Split"].includes(u.type));
+  const heaters = units.filter(u => u.type.startsWith("Heater"));
+  if (!cooling.length && !heaters.length) return null;
+  let text = "";
+  if (cooling.length) {
+    const rtuList = cooling.filter(u => u.type === "RTU");
+    const splitList = cooling.filter(u => u.type === "Split");
+    const miniList = cooling.filter(u => u.type === "Mini-Split");
+    const totalTons = cooling.reduce((s,u) => s + (parseFloat(u.size)||0), 0);
+    const coolMfrs = [...new Set(cooling.map(u => u.manufacturer).filter(Boolean))];
+    const refrig = cooling.find(u => u.refrigerant)?.refrigerant || "R-410A";
+    const typeParts = [];
+    if (rtuList.length) typeParts.push(`${numPair(rtuList.length)} rooftop package unit${rtuList.length>1?"s":""} (RTU)`);
+    if (splitList.length) typeParts.push(`${numPair(splitList.length)} split system${splitList.length>1?"s":""}`);
+    if (miniList.length) typeParts.push(`${numPair(miniList.length)} mini-split unit${miniList.length>1?"s":""}`);
+    text = `The building${cooling.length>1?"s are":" is"} provided with heated and conditioned air by a total of ${numPair(cooling.length)} unit${cooling.length>1?"s":""}: ${listAnd(typeParts)} totaling ${totalTons} tons of conditioned air.`;
+    if (coolMfrs.length) text += ` The units are manufactured by ${listAnd(coolMfrs)} with refrigerant type ${refrig}.`;
+  }
+  if (heaters.length) {
+    const heatMfrs = [...new Set(heaters.map(u => u.manufacturer).filter(Boolean))];
+    text += (text ? " " : "") + `${numPair(heaters.length)} ceiling-mounted heater${heaters.length>1?"s":""} ${heaters.length>1?"were":"was"} observed${heatMfrs.length ? `, manufactured by ${listAnd(heatMfrs)}` : ""}.`;
+  }
+  return text;
+}
+
+function generateHvacCond(units, baseYear) {
+  const cooling = units.filter(u => ["RTU","Split","Mini-Split"].includes(u.type));
+  if (!cooling.length) return null;
+  const EUL = 15;
+  const replGroups = {};
+  cooling.forEach(u => {
+    if (!u.year) return;
+    const relYear = parseInt(u.year) + EUL - baseYear + 1;
+    if (!replGroups[relYear]) replGroups[relYear] = { tons: 0, count: 0 };
+    replGroups[relYear].tons += parseFloat(u.size) || 0;
+    replGroups[relYear].count++;
+  });
+  const sortedYears = Object.keys(replGroups).map(Number).sort((a,b) => a-b);
+  let text = "The HVAC units appear to be in good condition.";
+  if (sortedYears.length) {
+    const EULstr = `With an EUL of ${EUL} years,`;
+    if (sortedYears.length === 1) {
+      const y = sortedYears[0]; const g = replGroups[y];
+      text += ` ${EULstr} replacement of ${numPair(g.count)} unit${g.count>1?"s":""} (${g.tons} tons) is anticipated in Year ${y}.`;
+    } else {
+      text += ` ${EULstr} replacement is anticipated as follows: ` +
+        sortedYears.map(y => { const g = replGroups[y]; return `${numPair(g.count)} unit${g.count>1?"s":""} (${g.tons} tons) in Year ${y}`; }).join("; ") + ".";
+    }
+  }
+  return text;
+}
+
+function generateHvacRec(units, baseYear) {
+  const cooling = units.filter(u => ["RTU","Split","Mini-Split"].includes(u.type));
+  if (!cooling.length) return null;
+  const EUL = 15;
+  const replGroups = {};
+  cooling.forEach(u => {
+    if (!u.year) return;
+    const relYear = parseInt(u.year) + EUL - baseYear + 1;
+    if (relYear > 0) {
+      if (!replGroups[relYear]) replGroups[relYear] = { tons: 0 };
+      replGroups[relYear].tons += parseFloat(u.size) || 0;
+    }
+  });
+  const sortedYears = Object.keys(replGroups).map(Number).sort((a,b) => a-b);
+  if (!sortedYears.length) return null;
+  return sortedYears.map(y => `Allowance to replace HVAC units (${replGroups[y].tons} Tons) (Year ${y})`).join("\n");
+}
+
+function renderHvacTable() {
+  const units = (job && job.hvacUnits) || [];
+  const tbl = $("hvactable");
+  if (!units.length) {
+    tbl.innerHTML = '<div style="color:#555;font-size:14px;padding:4px 0">No units logged yet.</div>';
+    return;
+  }
+  const baseYear = new Date().getFullYear();
+  const EUL = 15;
+  const cooling = units.filter(u => ["RTU","Split","Mini-Split"].includes(u.type));
+  const totalTons = cooling.reduce((s,u) => s + (parseFloat(u.size)||0), 0);
+  tbl.replaceChildren();
+  const summary = document.createElement("div");
+  summary.style.cssText = "font-size:13px;color:#555;margin-bottom:6px";
+  summary.textContent = `${units.length} unit${units.length>1?"s":""}, ${totalTons} tons total`;
+  tbl.append(summary);
+  units.forEach(u => {
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;gap:6px;align-items:center;padding:5px 0;border-top:1px solid #eee;font-size:14px";
+    const age = u.year ? `${baseYear - u.year}yr` : "?yr";
+    const replYear = u.year ? (parseInt(u.year) + EUL - baseYear + 1) : null;
+    const replStr = replYear !== null ? `  → Yr ${replYear}` : "";
+    const info = document.createElement("span");
+    info.style.flex = "1";
+    info.textContent = `${u.type}  ${u.manufacturer||"?"}  ${u.year||"?"}  (${age}${replStr})${u.size ? "  " + u.size + "T" : ""}${u.building ? "  |  " + u.building : ""}`;
+    const del = document.createElement("button");
+    del.className = "alt small"; del.textContent = "✕";
+    del.onclick = async () => {
+      job.hvacUnits = job.hvacUnits.filter(x => x.id !== u.id);
+      await db.putJob(job); renderHvacTable();
+    };
+    row.append(info, del); tbl.append(row);
+  });
+}
+
+$("addunit").onclick = async () => {
+  if (!job) return;
+  if (!job.hvacUnits) job.hvacUnits = [];
+  job.hvacUnits.push({
+    id: db.uid(),
+    building: $("hvacbldg").value.trim(),
+    type: $("hvactype").value,
+    manufacturer: $("hvacmfr").value.trim(),
+    year: parseInt($("hvacyear").value) || null,
+    size: parseFloat($("hvacsize").value) || null,
+    refrigerant: $("hvacrefrig").value.trim() || "R-410A",
+  });
+  await db.putJob(job);
+  renderHvacTable();
+  $("hvacmfr").value = ""; $("hvacyear").value = ""; $("hvacsize").value = ""; $("hvacbldg").value = "";
+};
+
+$("genhvac").onclick = async () => {
+  if (!job || !job.hvacUnits?.length) { $("status").textContent = "No HVAC units logged yet."; return; }
+  const baseYear = new Date().getFullYear();
+  const descText = generateHvacDesc(job.hvacUnits);
+  const condText = generateHvacCond(job.hvacUnits, baseYear);
+  const recText = generateHvacRec(job.hvacUnits, baseYear);
+  let saved = 0;
+  const stamp = Date.now();
+  if (descText) { await db.putItem({ id: db.uid(), jobId: job.id, ts: stamp, kind: "note", sectionId: "5.2", caption: "", transcript: descText, photo: null, noteType: "description" }); saved++; }
+  if (condText) { await db.putItem({ id: db.uid(), jobId: job.id, ts: stamp+1, kind: "note", sectionId: "5.2", caption: "", transcript: condText, photo: null, noteType: "condition" }); saved++; }
+  if (recText) { await db.putItem({ id: db.uid(), jobId: job.id, ts: stamp+2, kind: "note", sectionId: "5.2", caption: "", transcript: recText, photo: null, noteType: "rec", tier: "long" }); saved++; }
+  $("status").textContent = `Generated ${saved} HVAC note${saved===1?"":"s"}.`;
+  dirty(); await load();
+};
+
 // ---------- start ----------
 // Shown under More so you can tell which build the phone is running. Keep in step with CACHE in sw.js.
-const VERSION = "v8: place search";
+const VERSION = "v11: AI context + HVAC table";
 $("version").textContent = "App version: " + VERSION;
 
 async function init() {

@@ -1,3 +1,24 @@
+import { SECTION_DEFAULTS } from "./boilerplate.js";
+
+const NO_RECS_PREFIX = "No recommended Immediate Needs";
+
+// First sentence only — keeps context compact.
+const firstSentence = t => { const m = t.match(/^[^.!?]+[.!?]/); return m ? m[0] : t.slice(0, 120) + (t.length > 120 ? "…" : ""); };
+
+function buildBoilerplateContext() {
+  const lines = [];
+  for (const [id, bp] of Object.entries(SECTION_DEFAULTS)) {
+    const parts = [];
+    if (bp.desc) parts.push(`desc: "${firstSentence(bp.desc)}"`);
+    if (bp.cond) parts.push(`cond: "${firstSentence(bp.cond)}"`);
+    if (bp.rec && !bp.rec.startsWith(NO_RECS_PREFIX)) parts.push(`rec: "${bp.rec.split("\n")[0]}"`);
+    if (parts.length) lines.push(`${id}: ${parts.join(" | ")}`);
+  }
+  return lines.join("\n");
+}
+
+const BOILERPLATE_CONTEXT = buildBoilerplateContext();
+
 const BASE_PROMPT = `You are a licensed property condition assessor writing field notes for ASTM E2018-24 Property Condition Assessment reports. Transform rough spoken or typed field observations into polished, professional report language.
 
 STYLE RULES:
@@ -55,21 +76,15 @@ Field notes: "seal cracks in asphalt 3300 LF and concrete 300 LF year 1, sealcoa
 Section: Paving, Curbing, and Parking
 Output: {"type":"rec","tier":"short","text":"Allowance to apply sealants to cracks in the asphalt pavement (3,300 LF) (Year 1)\\nAllowance to apply sealants to cracks in the concrete pavement (300 LF) (Year 1)\\nAllowance to clean, seal coat, and stripe the asphalt parking lot and driveways (Years 1 and 6)\\nAllowance to mill, tack, and overlay the western parking lot (6,095 SY) (Year 1)"}`;
 
-const POLISH_PROMPT = BASE_PROMPT + `
-
-OUTPUT FORMAT: Return only a JSON object — no markdown, no code fences:
-{"type":"description|condition|rec","tier":"immediate|short|long|null","text":"rewritten note"}
-tier must be null for description and condition notes.`;
-
 const AI_PROMPT = BASE_PROMPT + `
 
-TASK: The user provides a field observation and a list of report sections. Identify the best-matching section, then produce one note per distinct aspect present — a Description if they described the system, a Condition if they assessed its state, a Recommendation if they called for action. Most observations will produce only one note. Only produce multiple notes when the observation genuinely covers more than one aspect.
+TASK: Identify the best-matching section, then produce one note per distinct aspect — Description for what was observed, Condition for state assessment, Recommendation for action items. Most observations produce only one note. When the pre-filled section defaults already cover what was said, write only what adds new information rather than repeating it. Use the property name naturally when it fits (e.g. "The subject property…" or by name on first mention).
 OUTPUT FORMAT: Return only a JSON object — no markdown, no code fences:
 {"section":"<id from the provided list>","notes":[{"type":"description|condition|rec","tier":"immediate|short|long|null","text":"..."}]}
 tier is null for description and condition notes.`;
 
 function parseJSON(raw) {
-  return JSON.parse(raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim());
+  return JSON.parse(raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim());
 }
 
 async function apiCall(systemPrompt, userContent, maxTokens) {
@@ -97,13 +112,22 @@ async function apiCall(systemPrompt, userContent, maxTokens) {
   return (await res.json()).content[0].text.trim();
 }
 
-export async function polishNote(text, sectionName) {
-  const raw = await apiCall(POLISH_PROMPT, `Section: ${sectionName}\n\nField notes: "${text}"`, 400);
-  return parseJSON(raw); // {type, tier, text}
-}
-
-export async function splitNote(text, sections) {
+// jobContext: { name, address, client } — all optional
+export async function splitNote(text, sections, jobContext = {}) {
   const sectionList = sections.map(s => `${s.id}: ${s.title}`).join("\n");
-  const raw = await apiCall(AI_PROMPT, `Available sections:\n${sectionList}\n\nField notes: "${text}"`, 800);
-  return parseJSON(raw); // {section, notes: [{type, tier, text}, ...]}
+
+  const ctxLines = [];
+  if (jobContext.name)    ctxLines.push(`Property: ${jobContext.name}`);
+  if (jobContext.address) ctxLines.push(`Address: ${jobContext.address}`);
+  if (jobContext.client)  ctxLines.push(`Client: ${jobContext.client}`);
+  const ctxBlock = ctxLines.length ? ctxLines.join("\n") + "\n\n" : "";
+
+  const bpBlock = BOILERPLATE_CONTEXT
+    ? `Pre-filled defaults already in the report (supplement these, do not repeat the same information):\n${BOILERPLATE_CONTEXT}\n\n`
+    : "";
+
+  const userContent = `${ctxBlock}${bpBlock}Available sections:\n${sectionList}\n\nField notes: "${text}"`;
+
+  const raw = await apiCall(AI_PROMPT, userContent, 800);
+  return parseJSON(raw);
 }
