@@ -74,22 +74,48 @@ export function reportParts(job, items, logo) {
   }
   const typeOf = n => n.noteType || "description";
 
+  const RED = "EE0000";
+  const redRun = text => new TextRun({ text, color: RED });
+
+  // Build a paragraph: optional red boilerplate run + black assessor-note runs.
+  function bpParagraph(bpText, noteTexts) {
+    const runs = [];
+    if (bpText) runs.push(redRun(bpText));
+    noteTexts.forEach(t => {
+      if (runs.length) runs.push(new TextRun({ text: " " }));
+      runs.push(new TextRun({ text: t }));
+    });
+    return PR(runs);
+  }
+
   // A report subsection: description, Survey Condition and Analysis, Recommendations.
   function sectionBlock(id, heading, level, intro) {
     const notes = notesBy.get(id) || [];
+    const bp = B.SECTION_DEFAULTS[id] || {};
     const out = [];
     if (heading) out.push(sub(heading, level));
     if (intro) out.push(P(intro));
+
     const desc = notes.filter(n => typeOf(n) === "description");
-    desc.length ? desc.forEach(n => out.push(P(n.transcript))) : out.push(TODO());
+    (bp.desc || desc.length)
+      ? out.push(bpParagraph(bp.desc, desc.map(n => n.transcript)))
+      : out.push(TODO());
 
     out.push(bold("Survey Condition and Analysis"));
     const cond = notes.filter(n => typeOf(n) === "condition");
-    cond.length ? cond.forEach(n => out.push(P(n.transcript))) : out.push(TODO());
+    (bp.cond || cond.length)
+      ? out.push(bpParagraph(bp.cond, cond.map(n => n.transcript)))
+      : out.push(TODO());
 
     out.push(bold("Recommendations:"));
     const recs = notes.filter(n => typeOf(n) === "rec");
-    recs.length ? recs.forEach(n => out.push(P(n.transcript))) : out.push(TODO());
+    if (recs.length) {
+      recs.forEach(n => n.transcript.split("\n").forEach(line => line.trim() && out.push(P(line.trim()))));
+    } else if (bp.rec) {
+      bp.rec.split("\n").forEach(line => out.push(PR([redRun(line.trim())])));
+    } else {
+      out.push(TODO());
+    }
     return out;
   }
 
