@@ -112,7 +112,7 @@ async function apiCall(systemPrompt, userContent, maxTokens) {
     throw new Error(msg);
   }
   const data = await res.json();
-  const text = data?.content?.[0]?.text;
+  const text = data?.content?.find(b => b.type === "text")?.text;
   if (!text) throw new Error("Unexpected response: " + JSON.stringify(data).slice(0, 300));
   return text.trim();
 }
