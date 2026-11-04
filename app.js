@@ -288,10 +288,12 @@ $("split").onclick = async () => {
   $("status").textContent = "";
   preAiText = t;
   try {
-    const results = await splitNote(t, sectionTitle(current));
+    const { section: detectedId, notes } = await splitNote(t, SECTIONS.filter(s => s.id !== "photo"));
+    const validSection = SECTIONS.find(s => s.id === detectedId);
+    if (validSection && detectedId !== current) setSection(detectedId);
     const preview = $("splitpreview");
     preview.replaceChildren();
-    results.forEach(note => {
+    notes.forEach(note => {
       const wrap = document.createElement("div");
       wrap.style.cssText = "border:1px solid #bbb;border-radius:8px;padding:8px;margin-bottom:6px";
       const tag = document.createElement("span");
@@ -306,7 +308,7 @@ $("split").onclick = async () => {
       preview.append(wrap);
     });
     const saveAll = document.createElement("button");
-    saveAll.textContent = `Save all ${results.length} notes`;
+    saveAll.textContent = `Save all ${notes.length} notes`;
     saveAll.style.cssText = "width:100%;margin-top:4px;padding:14px;background:var(--g);color:#fff;border:0;border-radius:10px;font-size:17px;cursor:pointer";
     saveAll.onclick = async () => {
       let saved = 0;
