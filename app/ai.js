@@ -63,10 +63,10 @@ tier must be null for description and condition notes.`;
 
 const SPLIT_PROMPT = BASE_PROMPT + `
 
-SPLIT MODE: The user provides a full observation covering multiple aspects of one section. Split it into separate Description, Condition, and/or Recommendation notes.
-OUTPUT FORMAT: Return only a JSON array — no markdown, no code fences:
-[{"type":"description|condition|rec","tier":"immediate|short|long|null","text":"..."}]
-Only include types present in the notes. Omit types with no content. tier is null for non-recommendation notes.`;
+SPLIT MODE: The user provides a full field observation and a list of report sections. Identify which section best matches the content, then split the observation into separate Description, Condition, and/or Recommendation notes.
+OUTPUT FORMAT: Return only a JSON object — no markdown, no code fences:
+{"section":"<id from the provided list>","notes":[{"type":"description|condition|rec","tier":"immediate|short|long|null","text":"..."}]}
+Only include note types present in the observation. tier is null for non-recommendation notes.`;
 
 function parseJSON(raw) {
   return JSON.parse(raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim());
@@ -102,7 +102,8 @@ export async function polishNote(text, sectionName) {
   return parseJSON(raw); // {type, tier, text}
 }
 
-export async function splitNote(text, sectionName) {
-  const raw = await apiCall(SPLIT_PROMPT, `Section: ${sectionName}\n\nField notes: "${text}"`, 800);
-  return parseJSON(raw); // [{type, tier, text}, ...]
+export async function splitNote(text, sections) {
+  const sectionList = sections.map(s => `${s.id}: ${s.title}`).join("\n");
+  const raw = await apiCall(SPLIT_PROMPT, `Available sections:\n${sectionList}\n\nField notes: "${text}"`, 800);
+  return parseJSON(raw); // {section, notes: [{type, tier, text}, ...]}
 }
