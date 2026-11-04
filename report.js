@@ -109,11 +109,15 @@ export function reportParts(job, items, logo) {
 
     out.push(bold("Recommendations:"));
     const recs = notes.filter(n => typeOf(n) === "rec");
+    // Red default rec: always show if it's a real line item (not just the generic "no needs" message).
+    // The generic "no needs" message is suppressed when the assessor has their own recs.
+    const isNoRecs = bp.rec && bp.rec.startsWith("No recommended Immediate Needs");
+    if (bp.rec && (!isNoRecs || !recs.length)) {
+      bp.rec.split("\n").forEach(line => line.trim() && out.push(PR([redRun(line.trim())])));
+    }
     if (recs.length) {
       recs.forEach(n => n.transcript.split("\n").forEach(line => line.trim() && out.push(P(line.trim()))));
-    } else if (bp.rec) {
-      bp.rec.split("\n").forEach(line => out.push(PR([redRun(line.trim())])));
-    } else {
+    } else if (!bp.rec) {
       out.push(TODO());
     }
     return out;
