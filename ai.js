@@ -104,10 +104,12 @@ async function apiCall(systemPrompt, userContent, maxTokens) {
       system: systemPrompt,
       messages: [{ role: "user", content: userContent }],
     }),
-  });
+  }).catch(() => { throw new Error("Cannot reach Anthropic API — check your API key in More → AI, or check your network connection."); });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error?.message || `API error ${res.status}`);
+    const msg = err.error?.message || `API error ${res.status}`;
+    if (res.status === 401) throw new Error("Invalid or expired API key — re-enter it in More → AI.");
+    throw new Error(msg);
   }
   return (await res.json()).content[0].text.trim();
 }

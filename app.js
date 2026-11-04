@@ -579,7 +579,7 @@ $("genhvac").onclick = async () => {
 
 // ---------- start ----------
 // Shown under More so you can tell which build the phone is running. Keep in step with CACHE in sw.js.
-const VERSION = "v11: AI context + HVAC table";
+const VERSION = "v12: better API error messages";
 $("version").textContent = "App version: " + VERSION;
 
 async function init() {
