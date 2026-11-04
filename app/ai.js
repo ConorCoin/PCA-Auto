@@ -111,7 +111,10 @@ async function apiCall(systemPrompt, userContent, maxTokens) {
     if (res.status === 401) throw new Error("Invalid or expired API key — re-enter it in More → AI.");
     throw new Error(msg);
   }
-  return (await res.json()).content[0].text.trim();
+  const data = await res.json();
+  const text = data?.content?.[0]?.text;
+  if (!text) throw new Error("Unexpected response: " + JSON.stringify(data).slice(0, 300));
+  return text.trim();
 }
 
 // jobContext: { name, address, client } — all optional
