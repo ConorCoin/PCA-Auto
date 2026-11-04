@@ -102,7 +102,11 @@ const NO_RECS = "No recommended Immediate Needs, Short-Term Needs, or Long-Term 
 // rec: shown in red only when the assessor has no rec notes for that section.
 export const SECTION_DEFAULTS = {
   "3.1": { desc: null, cond: null, rec: NO_RECS },
-  "3.2.1": { desc: null, cond: null, rec: NO_RECS },
+  "3.2.1": {
+    desc: null,
+    cond: "The topography of the property is appropriate for the property with drainage towards the south and west.",
+    rec: NO_RECS,
+  },
   "3.2.2": {
     desc: null,
     cond: "The storm water drainage systems appear to be in good condition.",
