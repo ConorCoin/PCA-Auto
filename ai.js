@@ -87,7 +87,9 @@ function parseJSON(raw) {
   return JSON.parse(raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim());
 }
 
-async function apiCall(systemPrompt, userContent, maxTokens) {
+// cachedUserContent is the same every call (boilerplate + section list) — Anthropic caches it.
+// variableUserContent is unique per call (property context + field notes) — not cached.
+async function apiCall(systemPrompt, cachedUserContent, variableUserContent, maxTokens) {
   const key = localStorage.getItem("pca.apikey");
   if (!key) throw new Error("no-key");
   const res = await fetch("/anthropic/v1/messages", {
@@ -101,8 +103,11 @@ async function apiCall(systemPrompt, userContent, maxTokens) {
     body: JSON.stringify({
       model: "claude-sonnet-5-5",
       max_tokens: maxTokens,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userContent }],
+      system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
+      messages: [{ role: "user", content: [
+        { type: "text", text: cachedUserContent, cache_control: { type: "ephemeral" } },
+        { type: "text", text: variableUserContent },
+      ]}],
     }),
   }).catch(() => { throw new Error("Cannot reach Anthropic API — check your API key in More → AI, or check your network connection."); });
   if (!res.ok) {
@@ -121,18 +126,19 @@ async function apiCall(systemPrompt, userContent, maxTokens) {
 export async function splitNote(text, sections, jobContext = {}) {
   const sectionList = sections.map(s => `${s.id}: ${s.title}`).join("\n");
 
+  // Cached block: boilerplate + section list — identical on every call
+  const cachedUserContent = (BOILERPLATE_CONTEXT
+    ? `Pre-filled defaults already in the report (supplement these, do not repeat the same information):\n${BOILERPLATE_CONTEXT}\n\n`
+    : "") + `Available sections:\n${sectionList}`;
+
+  // Variable block: property context + field notes — unique per call
   const ctxLines = [];
   if (jobContext.name)    ctxLines.push(`Property: ${jobContext.name}`);
   if (jobContext.address) ctxLines.push(`Address: ${jobContext.address}`);
   if (jobContext.client)  ctxLines.push(`Client: ${jobContext.client}`);
   const ctxBlock = ctxLines.length ? ctxLines.join("\n") + "\n\n" : "";
+  const variableUserContent = `${ctxBlock}Field notes: "${text}"`;
 
-  const bpBlock = BOILERPLATE_CONTEXT
-    ? `Pre-filled defaults already in the report (supplement these, do not repeat the same information):\n${BOILERPLATE_CONTEXT}\n\n`
-    : "";
-
-  const userContent = `${ctxBlock}${bpBlock}Available sections:\n${sectionList}\n\nField notes: "${text}"`;
-
-  const raw = await apiCall(AI_PROMPT, userContent, 800);
+  const raw = await apiCall(AI_PROMPT, cachedUserContent, variableUserContent, 800);
   return parseJSON(raw);
 }
