@@ -78,7 +78,7 @@ Output: {"type":"rec","tier":"short","text":"Allowance to apply sealants to crac
 
 const AI_PROMPT = BASE_PROMPT + `
 
-TASK: Identify the best-matching section, then produce one note per distinct aspect — Description for what was observed, Condition for state assessment, Recommendation for action items. Most observations produce only one note. When the pre-filled section defaults already cover what was said, write only what adds new information rather than repeating it. Use the property name naturally when it fits (e.g. "The subject property…" or by name on first mention).
+TASK: Identify the best-matching section, then produce one note per distinct aspect — Description for what was observed, Condition for state assessment, Recommendation for action items. Split into separate notes whenever the observation includes both a physical description and a condition assessment, or both a condition and a recommendation. Do not combine different note types into one. When the pre-filled section defaults already cover what was said, write only what adds new information rather than repeating it. Use the property name naturally when it fits (e.g. "The subject property…" or by name on first mention).
 OUTPUT FORMAT: Return only a JSON object — no markdown, no code fences:
 {"section":"<id from the provided list>","notes":[{"type":"description|condition|rec","tier":"immediate|short|long|null","text":"..."}]}
 tier is null for description and condition notes.`;
