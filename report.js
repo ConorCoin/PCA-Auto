@@ -82,13 +82,20 @@ export function reportParts(job, items, logo) {
   // field note is the subject and bpText is the predicate; they combine into one sentence.
   function bpParagraph(bpText, noteTexts) {
     const runs = [];
+    const isIncomplete = bpText && /…/.test(bpText);
+    if (bpText) bpText = bpText.replace(/…$/, "");
     const isFragment = bpText && /^[a-z]/.test(bpText);
     if (isFragment && noteTexts.length) {
+      // end-fragment: note is subject, red text is predicate
       const subject = noteTexts[0].replace(/[.!?]\s*$/, "");
       runs.push(new TextRun({ text: subject + " " }));
       runs.push(redRun(bpText));
       noteTexts.slice(1).forEach(t => { runs.push(new TextRun({ text: " " })); runs.push(new TextRun({ text: t })); });
+    } else if (isIncomplete && noteTexts.length) {
+      // incomplete: AI wrote the full sentence — show note in black, no red prefix
+      noteTexts.forEach(t => { if (runs.length) runs.push(new TextRun({ text: " " })); runs.push(new TextRun({ text: t })); });
     } else {
+      // complete sentence: red text first, note appended after
       if (bpText) runs.push(redRun(bpText));
       noteTexts.forEach(t => { if (runs.length) runs.push(new TextRun({ text: " " })); runs.push(new TextRun({ text: t })); });
     }
