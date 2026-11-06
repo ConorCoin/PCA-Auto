@@ -104,16 +104,16 @@ export const SECTION_DEFAULTS = {
   "3.1": { desc: null, cond: null, rec: NO_RECS },
   "3.2.1": {
     desc: null,
-    cond: "The topography of the property is appropriate for the property with drainage towards the south and west.",
+    cond: "The topography of the property is appropriate for the property with drainage",
     rec: NO_RECS,
   },
   "3.2.2": {
-    desc: null,
+    desc: "Storm water generally drains towards",
     cond: "The storm water drainage systems appear to be in good condition.",
     rec: NO_RECS,
   },
   "3.2.3": {
-    desc: null,
+    desc: "Vehicular access is provided to the dealership by",
     cond: "Site access appears to be adequate for the site's intended use. No issues regarding ingress/egress were observed or reported to SM&E.",
     rec: NO_RECS,
   },
@@ -122,7 +122,11 @@ export const SECTION_DEFAULTS = {
     cond: "The asphalt and concrete pavement on the property appeared to be in fair condition. It did not appear that the pavement had received maintenance recently, greater than 5 years. SM&E generally recommends cleaning, seal coating and striping pavement on a five-year schedule. Based on the assumed age and observed condition, SM&E has included an allowance to apply seal coating and striping the asphalt pavement during the term.",
     rec: "Allowance to clean, seal coat, and stripe asphalt. (Years 1 and 6)",
   },
-  "3.2.5": { desc: null, cond: null, rec: NO_RECS },
+  "3.2.5": {
+    desc: "Walkways, steps, and ramps are limited to conventional entrance landing pads, sidewalks, and equipment pads located inside the property line.",
+    cond: null,
+    rec: NO_RECS,
+  },
   "3.2.6": {
     desc: "Landscape vegetation consists of grass, trees, shrubs, and mulch within the parking area islands and perimeter areas of the property.",
     cond: "Landscaping appeared to be in good condition, requiring routine maintenance during the term. All landscaping is handled by a third party.",
@@ -133,7 +137,11 @@ export const SECTION_DEFAULTS = {
     cond: null,
     rec: NO_RECS,
   },
-  "3.2.8": { desc: null, cond: null, rec: NO_RECS },
+  "3.2.8": {
+    desc: "Monument and building mounted signage were observed on the building and along",
+    cond: "The monument and building mounted signage appeared to be in good condition.",
+    rec: NO_RECS,
+  },
   "3.2.9": {
     desc: "No perimeter walls, gates or fences were present on the property.",
     cond: null,
@@ -155,12 +163,12 @@ export const SECTION_DEFAULTS = {
     rec: NO_RECS,
   },
   "4.1": {
-    desc: null,
+    desc: "The building foundations are concealed and cannot be directly observed. Construction drawings of these systems were not provided for review. Based on experience with similar structures, the foundation system is believed to consist of concrete foundation walls and shallow reinforced concrete perimeter footings. The floor slabs consist of smooth-finished reinforced concrete slab-on-grade.",
     cond: null,
     rec: NO_RECS + " Normal monitoring of the foundation is anticipated during the evaluation period.",
   },
   "4.2": {
-    desc: null,
+    desc: "The building structures consist of steel I-Beam columns with steel roof decking in the service and dealership building.",
     cond: "The structural systems for the buildings appear to be in good condition and are free of visual signs of deficiency. No issues regarding the building structure were observed or reported to SM&E during our walkthrough.",
     rec: NO_RECS + " Normal monitoring of the building frame is anticipated during the evaluation period.",
   },
@@ -174,13 +182,21 @@ export const SECTION_DEFAULTS = {
     cond: "Doors and windows appear to be in good condition. The automatic high bay and manual roll-up doors are in good condition and appeared operational at the time of the walk-through. The exterior door and window sealants appear to be in fair condition. SM&E generally recommends replacing exterior door and window sealants on a 5-year basis. SM&E has included an allowance to replace the exterior sealants on the building.",
     rec: "Allowance to replace exterior sealants (1,500 LF) (Years 1 & 6)",
   },
-  "4.4.1": { desc: null, cond: null, rec: NO_RECS },
-  "5.1": {
-    desc: "It appears that typical supply piping for domestic water is copper. Sanitary lines and ventilation conduits are PVC. Underground sanitary lines were not directly observed but are believed to be PVC. The plumbing fixtures for restroom areas are of typical commercial grade vitreous China.",
-    cond: null,
+  "4.4.1": {
+    desc: "The roof systems are comprised of",
+    cond: "The low-sloped roof system appears to be in good condition. The gutters and downspouts around the building are in good condition.",
     rec: NO_RECS,
   },
-  "5.2": { desc: null, cond: null, rec: NO_RECS },
+  "5.1": {
+    desc: "It appears that typical supply piping for domestic water is copper. Sanitary lines and ventilation conduits are PVC. Underground sanitary lines were not directly observed but are believed to be PVC. The plumbing fixtures for restroom areas are of typical commercial grade vitreous China.",
+    cond: "The plumbing system appears to be in good condition.",
+    rec: NO_RECS,
+  },
+  "5.2": {
+    desc: "The buildings are provided with heated and conditioned air by a total of",
+    cond: "The HVAC units appear to be in good condition.",
+    rec: NO_RECS,
+  },
   "5.3": {
     desc: "Breaker panels range in size from 120–200 amps. Branch wiring is copper but was not verified.",
     cond: "The electrical systems appear to be in good condition and appear adequate for the site's present use. Management reported no known problems. Switchgear and power distribution panels typically have an EUL of 40 years. Based on the age, the electrical systems will last throughout the term.",
