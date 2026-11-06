@@ -98,13 +98,13 @@ export function reportParts(job, items, logo) {
 
     const desc = notes.filter(n => typeOf(n) === "description");
     (bp.desc || desc.length)
-      ? out.push(bpParagraph(bp.desc, desc.map(n => n.transcript)))
+      ? out.push(bpParagraph(desc.length ? null : bp.desc, desc.map(n => n.transcript)))
       : out.push(TODO());
 
     out.push(bold("Survey Condition and Analysis"));
     const cond = notes.filter(n => typeOf(n) === "condition");
     (bp.cond || cond.length)
-      ? out.push(bpParagraph(bp.cond, cond.map(n => n.transcript)))
+      ? out.push(bpParagraph(cond.length ? null : bp.cond, cond.map(n => n.transcript)))
       : out.push(TODO());
 
     out.push(bold("Recommendations:"));
