@@ -579,7 +579,7 @@ $("genhvac").onclick = async () => {
 
 // ---------- start ----------
 // Shown under More so you can tell which build the phone is running. Keep in step with CACHE in sw.js.
-const VERSION = "v23: fill in missing boilerplate from template doc";
+const VERSION = "v24: remove Netlify proxy, call Anthropic API directly";
 $("version").textContent = "App version: " + VERSION;
 
 async function init() {
