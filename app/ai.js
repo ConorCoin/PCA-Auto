@@ -128,7 +128,7 @@ export async function splitNote(text, sections, jobContext = {}) {
 
   // Cached block: boilerplate + section list — identical on every call
   const cachedUserContent = (BOILERPLATE_CONTEXT
-    ? `Pre-filled defaults already in the report (supplement these, do not repeat the same information):\n${BOILERPLATE_CONTEXT}\n\n`
+    ? `Standard opening phrases for each section — BEGIN your notes with the relevant phrase and complete it with the specific details from the field notes. Do not change the opening wording:\n${BOILERPLATE_CONTEXT}\n\n`
     : "") + `Available sections:\n${sectionList}`;
 
   // Variable block: property context + field notes — unique per call
