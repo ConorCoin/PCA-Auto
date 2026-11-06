@@ -9,8 +9,14 @@ function buildBoilerplateContext() {
   const lines = [];
   for (const [id, bp] of Object.entries(SECTION_DEFAULTS)) {
     const parts = [];
-    if (bp.desc) parts.push(`desc: "${firstSentence(bp.desc)}"`);
-    if (bp.cond) parts.push(`cond: "${firstSentence(bp.cond)}"`);
+    if (bp.desc) {
+      const frag = /^[a-z]/.test(bp.desc);
+      parts.push(`desc${frag ? " (fragment—your note is the subject)" : ""}: "${firstSentence(bp.desc)}"`);
+    }
+    if (bp.cond) {
+      const frag = /^[a-z]/.test(bp.cond);
+      parts.push(`cond${frag ? " (fragment—your note is the subject)" : ""}: "${firstSentence(bp.cond)}"`);
+    }
     if (bp.rec && !bp.rec.startsWith(NO_RECS_PREFIX)) parts.push(`rec: "${bp.rec.split("\n")[0]}"`);
     if (parts.length) lines.push(`${id}: ${parts.join(" | ")}`);
   }
@@ -128,7 +134,7 @@ export async function splitNote(text, sections, jobContext = {}) {
 
   // Cached block: boilerplate + section list — identical on every call
   const cachedUserContent = (BOILERPLATE_CONTEXT
-    ? `Pre-filled defaults already in the report (supplement these, do not repeat the same information):\n${BOILERPLATE_CONTEXT}\n\n`
+    ? `Pre-filled defaults for each section. Complete-sentence defaults already appear in the report — supplement them, do not repeat. Fragment defaults (marked "fragment—your note is the subject") combine with your note: write only the subject/opening so together they form one sentence. Example: fragment "were observed in the driveways and parking lots" + your note "Asphalt pavement and concrete pavement" → one sentence.\n${BOILERPLATE_CONTEXT}\n\n`
     : "") + `Available sections:\n${sectionList}`;
 
   // Variable block: property context + field notes — unique per call

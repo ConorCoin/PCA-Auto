@@ -118,7 +118,7 @@ export const SECTION_DEFAULTS = {
     rec: NO_RECS,
   },
   "3.2.4": {
-    desc: "Concrete curbs were observed on the perimeter of property and landscaped islands.",
+    desc: "were observed in the driveways and parking lots on the property. Concrete curbs were observed on the perimeter of the property and landscaped islands.",
     cond: "The asphalt and concrete pavement on the property appeared to be in fair condition. It did not appear that the pavement had received maintenance recently, greater than 5 years. SM&E generally recommends cleaning, seal coating and striping pavement on a five-year schedule. Based on the assumed age and observed condition, SM&E has included an allowance to apply seal coating and striping the asphalt pavement during the term.",
     rec: "Allowance to clean, seal coat, and stripe asphalt. (Years 1 and 6)",
   },
