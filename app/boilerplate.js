@@ -103,17 +103,17 @@ const NO_RECS = "No recommended Immediate Needs, Short-Term Needs, or Long-Term 
 export const SECTION_DEFAULTS = {
   "3.1": { desc: null, cond: null, rec: NO_RECS },
   "3.2.1": {
-    desc: null,
-    cond: "The topography of the property is appropriate for the property with drainage",
+    desc: "The topography of the property is appropriate for the property with drainage…",
+    cond: null,
     rec: NO_RECS,
   },
   "3.2.2": {
-    desc: "Storm water generally drains towards",
+    desc: "Storm water generally drains towards…",
     cond: "The storm water drainage systems appear to be in good condition.",
     rec: NO_RECS,
   },
   "3.2.3": {
-    desc: "Vehicular access is provided to the dealership by",
+    desc: "Vehicular access is provided to the dealership by…",
     cond: "Site access appears to be adequate for the site's intended use. No issues regarding ingress/egress were observed or reported to SM&E.",
     rec: NO_RECS,
   },
@@ -138,7 +138,7 @@ export const SECTION_DEFAULTS = {
     rec: NO_RECS,
   },
   "3.2.8": {
-    desc: "Monument and building mounted signage were observed on the building and along",
+    desc: "Monument and building mounted signage were observed on the building and along…",
     cond: "The monument and building mounted signage appeared to be in good condition.",
     rec: NO_RECS,
   },
@@ -183,7 +183,7 @@ export const SECTION_DEFAULTS = {
     rec: "Allowance to replace exterior sealants (1,500 LF) (Years 1 & 6)",
   },
   "4.4.1": {
-    desc: "The roof systems are comprised of",
+    desc: "The roof systems are comprised of…",
     cond: "The low-sloped roof system appears to be in good condition. The gutters and downspouts around the building are in good condition.",
     rec: NO_RECS,
   },
@@ -193,7 +193,7 @@ export const SECTION_DEFAULTS = {
     rec: NO_RECS,
   },
   "5.2": {
-    desc: "The buildings are provided with heated and conditioned air by a total of",
+    desc: "The buildings are provided with heated and conditioned air by a total of…",
     cond: "The HVAC units appear to be in good condition.",
     rec: NO_RECS,
   },

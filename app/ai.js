@@ -10,12 +10,16 @@ function buildBoilerplateContext() {
   for (const [id, bp] of Object.entries(SECTION_DEFAULTS)) {
     const parts = [];
     if (bp.desc) {
-      const frag = /^[a-z]/.test(bp.desc);
-      parts.push(`desc${frag ? " (fragment—your note is the subject)" : ""}: "${firstSentence(bp.desc)}"`);
+      const lowFrag = /^[a-z]/.test(bp.desc);
+      const incomplete = !lowFrag && /…$/.test(bp.desc);
+      const label = lowFrag ? " (fragment—your note is the subject)" : incomplete ? " (incomplete—your note finishes this sentence)" : "";
+      parts.push(`desc${label}: "${firstSentence(bp.desc)}"`);
     }
     if (bp.cond) {
-      const frag = /^[a-z]/.test(bp.cond);
-      parts.push(`cond${frag ? " (fragment—your note is the subject)" : ""}: "${firstSentence(bp.cond)}"`);
+      const lowFrag = /^[a-z]/.test(bp.cond);
+      const incomplete = !lowFrag && /…$/.test(bp.cond);
+      const label = lowFrag ? " (fragment—your note is the subject)" : incomplete ? " (incomplete—your note finishes this sentence)" : "";
+      parts.push(`cond${label}: "${firstSentence(bp.cond)}"`);
     }
     if (bp.rec && !bp.rec.startsWith(NO_RECS_PREFIX)) parts.push(`rec: "${bp.rec.split("\n")[0]}"`);
     if (parts.length) lines.push(`${id}: ${parts.join(" | ")}`);
@@ -134,7 +138,7 @@ export async function splitNote(text, sections, jobContext = {}) {
 
   // Cached block: boilerplate + section list — identical on every call
   const cachedUserContent = (BOILERPLATE_CONTEXT
-    ? `Pre-filled defaults for each section. Complete-sentence defaults already appear in the report — supplement them, do not repeat. Fragment defaults (marked "fragment—your note is the subject") combine with your note: write only the subject/opening so together they form one sentence. Example: fragment "were observed in the driveways and parking lots" + your note "Asphalt pavement and concrete pavement" → one sentence.\n${BOILERPLATE_CONTEXT}\n\n`
+    ? `Pre-filled defaults for each section. Three cases:\n1. Complete sentence (ends with .): already in the report — write only additional info, do not repeat.\n2. End-fragment (marked "fragment—your note is the subject", starts lowercase): write only the subject. Example: fragment "were observed in the driveways" + subject "Asphalt pavement" → one sentence.\n3. Incomplete (marked "incomplete—your note finishes this sentence", ends with …): write the FULL sentence by completing it. Example: "Storm water generally drains towards…" → write "Storm water generally drains towards the south and east."\n${BOILERPLATE_CONTEXT}\n\n`
     : "") + `Available sections:\n${sectionList}`;
 
   // Variable block: property context + field notes — unique per call

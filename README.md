@@ -101,14 +101,23 @@ groupOf(id)        // "Mechanical / Electrical / Fire" (picker group header)
 
 ## AI Integration (`ai.js`)
 
-The app calls the Anthropic API directly from the browser using the `anthropic-dangerous-allow-browser: true` header. The API key is stored in `localStorage` on the user's device.
+The app calls the Anthropic API directly from the browser using the `anthropic-dangerous-direct-browser-access: true` header. The API key is stored in `localStorage` on the user's device.
 
 **Model:** `claude-sonnet-5-5`  
-**Approx. cost per call:** ~$0.007 (1,300 input tokens + 250 user tokens + 200 output tokens)
+**Approx. cost per call (cache hit):** ~$0.001 | **(cache miss):** ~$0.007
+
+### Prompt caching
+
+The request is split into two user message blocks:
+
+- **Cached block** (identical every call): boilerplate context + section list. Anthropic caches this after the first call. Cache TTL is 5 minutes — subsequent calls within that window cost ~10× less on those tokens.
+- **Variable block** (unique per call): property context + field notes. Never cached.
+
+The system prompt is also cached with `cache_control: { type: "ephemeral" }`.
 
 ### What gets sent
 
-Every AI call includes three layers in the user message:
+Every AI call includes:
 
 1. **Property context** — name, address, and client company pulled from `job.details`:
    ```
@@ -117,21 +126,20 @@ Every AI call includes three layers in the user message:
    Client: Group 1 Realty, Inc.
    ```
 
-2. **Boilerplate context** — first sentence of every non-null, non-generic default from `SECTION_DEFAULTS`, formatted compactly:
+2. **Boilerplate context** — first sentence of every non-null, non-generic default from `SECTION_DEFAULTS`, with type markers:
    ```
-   Pre-filled defaults already in the report (supplement these, do not repeat…):
-   3.2.1: cond: "The topography of the property is appropriate…"
-   3.2.2: cond: "The storm water drainage systems appear to be in good condition."
-   3.2.4: desc: "Concrete curbs were observed on the perimeter of property…" | rec: "Allowance to clean, seal coat, and stripe asphalt."
+   3.2.1: desc (incomplete—your note finishes this sentence): "The topography of the property is appropriate…"
+   3.2.2: desc (incomplete—your note finishes this sentence): "Storm water generally drains towards…"
+   3.2.4: desc (fragment—your note is the subject): "were observed in the driveways and parking lots…"
+   3.2.4: rec: "Allowance to clean, seal coat, and stripe asphalt."
    …
    ```
-   This keeps Claude from restating what's already on the page.
+   This keeps Claude from restating what's already on the page and tells it how each boilerplate combines with the note.
 
 3. **Section list + raw field notes:**
    ```
    Available sections:
    3.2.1: Topography
-   3.2.2: Storm Water Drainage
    …
 
    Field notes: "west lot is basically destroyed, alligator cracks everywhere"
@@ -197,7 +205,11 @@ The Word document is built in-browser using `docx.js` (the `docx` npm package bu
 | Black | Assessor field notes | `new TextRun({ text })` |
 | Grey italic | Unfilled placeholder | `new TextRun({ text: "[to complete]", italics: true, color: "808080" })` |
 
-Red and black text appear in the **same paragraph** when both exist — `bpParagraph(bpText, noteTexts)` in `report.js` builds a single `Paragraph` whose `children` array contains a red run first, then one black run per note.
+Red and black text appear in the **same paragraph** when both exist — `bpParagraph(bpText, noteTexts)` in `report.js` builds a single `Paragraph`. Three combining rules:
+
+1. **Complete sentence boilerplate** (starts uppercase, ends with `.`): red text first, assessor note appended in black after.
+2. **End-fragment boilerplate** (starts lowercase): assessor note is the subject in black, red fragment is the predicate. E.g. `"Asphalt pavement [black] were observed in the driveways [red]"`.
+3. **Incomplete boilerplate** (marked with `…` in `boilerplate.js`): Claude writes the full completed sentence; it appears in black only (no red prefix). Red text shows only when there is no assessor note.
 
 ### Recommendation stacking rule
 
@@ -231,7 +243,7 @@ String entries (`"3.2.1"`) go through `sectionBlock(id, heading, level, intro)` 
 2. On fetch: serve from cache if present, **and also** kick off a network fetch to update the cache silently.
 3. Old cache versions are deleted on activate.
 
-The cache name (`pca-v11`) is bumped manually in `sw.js` whenever a new build ships, forcing the old cache to be replaced on next open.
+The cache name (e.g. `pca-v24`) is bumped manually in `sw.js` whenever a new build ships, forcing the old cache to be replaced on next open.
 
 The app only intercepts same-origin GET requests. API calls to `api.anthropic.com` pass through to the network.
 
@@ -239,9 +251,9 @@ The app only intercepts same-origin GET requests. API calls to `api.anthropic.co
 
 ## Deploy
 
-Drag the `app/` folder to [Netlify Drop](https://app.netlify.com/drop). That's it. No build, no config file needed. The service worker installs on first load and the app works offline from then on.
+The app is hosted on **GitHub Pages** (branch `gh-pages`). Every push to `main` that touches `app/` automatically redeploys via the GitHub Actions workflow at `.github/workflows/deploy.yml` (uses `git subtree push --prefix app origin gh-pages`).
 
-The app is served from `index.html` with ES module scripts — no routing needed since it's a single-page app.
+The service worker installs on first load and the app works offline from then on. The app is served from `index.html` with ES module scripts — no routing needed since it's a single-page app.
 
 ---
 
