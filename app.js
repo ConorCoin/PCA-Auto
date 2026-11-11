@@ -3,7 +3,7 @@ import * as db from "./db.js";
 import { buildReport } from "./export.js";
 import { attachPlaceSearch } from "./places.js";
 import { GROUPS } from "./fields.js";
-import { splitNote } from "./ai.js";
+import { splitNote, parseHvacUnits } from "./ai.js";
 
 const $ = id => document.getElementById(id);
 const store = {
@@ -560,6 +560,50 @@ $("addunit").onclick = async () => {
   await db.putJob(job);
   renderHvacTable();
   $("hvacmfr").value = ""; $("hvacyear").value = ""; $("hvacsize").value = ""; $("hvacbldg").value = "";
+};
+
+$("hvacnotesbtn").onclick = () => { $("hvacnotebox").hidden = false; $("hvacnotetext").focus(); };
+$("cancelhvacnote").onclick = () => { $("hvacnotebox").hidden = true; $("hvacnotepreview").hidden = true; $("hvacnotetext").value = ""; };
+
+$("parsehvac").onclick = async () => {
+  const t = $("hvacnotetext").value.trim();
+  if (!t || !job) return;
+  $("parsehvac").disabled = true; $("parsehvac").textContent = "Working…";
+  try {
+    const { units } = await parseHvacUnits(t, { name: job.name });
+    if (!units?.length) { $("status").textContent = "No units found in those notes."; return; }
+    const preview = $("hvacnotepreview");
+    preview.replaceChildren();
+    units.forEach(u => {
+      const row = document.createElement("div");
+      row.style.cssText = "font-size:14px;padding:4px 0;border-top:1px solid #eee";
+      const count = u.count || 1;
+      row.textContent = `${count > 1 ? count + "× " : ""}${u.type}  ${u.manufacturer || "?"}  ${u.year || "?"}  ${u.size != null ? u.size + "T" : "?T"}  ${u.refrigerant || "R-410A"}${u.building ? "  |  " + u.building : ""}`;
+      preview.append(row);
+    });
+    const total = units.reduce((s, u) => s + (u.count || 1), 0);
+    const addBtn = document.createElement("button");
+    addBtn.textContent = `Add ${total} unit${total === 1 ? "" : "s"} to table`;
+    addBtn.style.cssText = "width:100%;margin-top:8px;padding:12px;background:var(--g);color:#fff;border:0;border-radius:10px;font-size:16px;cursor:pointer";
+    addBtn.onclick = async () => {
+      if (!job.hvacUnits) job.hvacUnits = [];
+      for (const u of units) {
+        for (let i = 0; i < (u.count || 1); i++) {
+          job.hvacUnits.push({ id: db.uid(), building: u.building || "", type: u.type, manufacturer: u.manufacturer || "", year: u.year || null, size: u.size || null, refrigerant: u.refrigerant || "R-410A" });
+        }
+      }
+      await db.putJob(job);
+      renderHvacTable();
+      $("hvacnotebox").hidden = true; $("hvacnotepreview").hidden = true; $("hvacnotetext").value = "";
+      $("status").textContent = `Added ${total} HVAC unit${total === 1 ? "" : "s"}.`;
+    };
+    preview.append(addBtn);
+    preview.hidden = false;
+  } catch (err) {
+    $("status").textContent = err.message === "no-key" ? "No API key — add one in More → AI." : "AI failed: " + err.message;
+  } finally {
+    $("parsehvac").disabled = false; $("parsehvac").textContent = "Parse";
+  }
 };
 
 $("genhvac").onclick = async () => {

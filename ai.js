@@ -102,6 +102,9 @@ function parseJSON(raw) {
 async function apiCall(systemPrompt, cachedUserContent, variableUserContent, maxTokens) {
   const key = localStorage.getItem("pca.apikey");
   if (!key) throw new Error("no-key");
+  const userContent = [];
+  if (cachedUserContent) userContent.push({ type: "text", text: cachedUserContent, cache_control: { type: "ephemeral" } });
+  userContent.push({ type: "text", text: variableUserContent });
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -114,10 +117,7 @@ async function apiCall(systemPrompt, cachedUserContent, variableUserContent, max
       model: "claude-sonnet-5-5",
       max_tokens: maxTokens,
       system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
-      messages: [{ role: "user", content: [
-        { type: "text", text: cachedUserContent, cache_control: { type: "ephemeral" } },
-        { type: "text", text: variableUserContent },
-      ]}],
+      messages: [{ role: "user", content: userContent }],
     }),
   }).catch(() => { throw new Error("Cannot reach Anthropic API — check your API key in More → AI, or check your network connection."); });
   if (!res.ok) {
@@ -130,6 +130,26 @@ async function apiCall(systemPrompt, cachedUserContent, variableUserContent, max
   const text = data?.content?.find(b => b.type === "text")?.text;
   if (!text) throw new Error("Unexpected response: " + JSON.stringify(data).slice(0, 300));
   return text.trim();
+}
+
+const HVAC_UNIT_PROMPT = `Extract HVAC unit data from field notes. Return only a JSON object (no markdown, no code fences):
+{"units":[{"building":"","type":"RTU","manufacturer":"","year":null,"size":null,"refrigerant":"R-410A","count":1}]}
+
+Rules:
+- type: must be exactly one of: RTU, Split, Mini-Split, Heater-Radiant, Heater-Tube
+- year: 4-digit install year as integer, or null if not stated
+- size: tonnage as decimal number, or null if not stated
+- refrigerant: e.g. "R-410A" — default to "R-410A" if not stated
+- building: which building (e.g. "Main", "Service", "Used Car") or "" if unclear
+- count: number of identical units grouped together — default 1
+Create a separate entry for any unit that differs in type, manufacturer, year, size, or building.`;
+
+export async function parseHvacUnits(text, jobContext = {}) {
+  const ctxLines = [];
+  if (jobContext.name) ctxLines.push(`Property: ${jobContext.name}`);
+  const ctxBlock = ctxLines.length ? ctxLines.join("\n") + "\n\n" : "";
+  const raw = await apiCall(HVAC_UNIT_PROMPT, "", `${ctxBlock}Field notes: "${text}"`, 400);
+  return parseJSON(raw);
 }
 
 // jobContext: { name, address, client } — all optional
