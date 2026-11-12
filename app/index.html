@@ -76,6 +76,11 @@
   <input id="jobaddr1" type="text" placeholder="Street address (e.g. 2501 Windy Hill Road SE)">
   <input id="jobaddr2" type="text" placeholder="City, State Zip (e.g. Marietta, GA 30067)">
   <button id="startjob" class="block">Start new assessment</button>
+  <div style="text-align:center;color:#555;font-size:14px;margin:4px 0">— or join an existing assessment —</div>
+  <div class="row" style="margin-bottom:8px">
+    <input id="joincode" type="text" placeholder="6-letter share code" maxlength="6" style="flex:1;text-transform:uppercase;letter-spacing:2px;font-family:monospace;padding:12px;border:1px solid #bbb;border-radius:8px">
+    <button id="joinjob" class="alt" style="width:auto;padding:14px 16px">Join</button>
+  </div>
 </div>
 
 <div id="main" class="pad" hidden>
@@ -137,6 +142,10 @@
   <details>
     <summary>More</summary>
     <div class="hint" id="version"></div>
+    <div id="sharecoderow" class="row" style="align-items:center;margin-bottom:6px" hidden>
+      <div style="flex:1;font-size:14px;color:#555">Share code: <strong id="sharecode"></strong></div>
+      <button id="copycode" class="alt small">Copy</button>
+    </div>
     <div class="hint">Property shown under every photo:</div>
     <input id="edsearch" type="text" placeholder="Search business or address (fills and saves)" autocomplete="off" style="width:100%;padding:10px;margin-bottom:6px;border:1px solid #bbb;border-radius:8px;box-sizing:border-box">
     <div id="edlist" class="suglist"></div>

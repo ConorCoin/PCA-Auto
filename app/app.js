@@ -17,6 +17,7 @@ let items = [];
 let current = SECTIONS[0].id;
 let urls = [];
 let report = null; // prepared Word file, ready to save
+let unsubscribe = null; // real-time Firestore listener teardown
 
 const sectionOf = it => it.sectionId || "photo";
 
@@ -52,6 +53,7 @@ function showMain() {
 }
 
 async function showSetup() {
+  if (unsubscribe) { unsubscribe(); unsubscribe = null; }
   $("main").hidden = true; $("bar").hidden = true; $("setup").hidden = false;
   $("title").textContent = "PCA Capture"; $("counts").textContent = "";
   const jobs = await db.listJobs();
@@ -75,11 +77,14 @@ async function showSetup() {
 }
 
 async function openJob(id) {
+  if (unsubscribe) { unsubscribe(); unsubscribe = null; }
   job = await db.getJob(id);
   if (!job) return showSetup();
   store.set("pca.job", id);
   report = null; $("saveReport").hidden = true;
-  await load();
+  const sr = $("sharecoderow"); if (sr) { sr.hidden = false; $("sharecode").textContent = job.shareCode || ""; }
+  await load(); // initial population
+  unsubscribe = db.onItemsChange(id, newItems => { items = newItems; renderItems(); });
   loadPropFields();
   showMain();
 }
@@ -112,6 +117,25 @@ $("savedetails").onclick = async () => {
   $("status").textContent = "Property details saved.";
 };
 $("switch").onclick = showSetup;
+
+$("joinjob").onclick = async () => {
+  const code = $("joincode").value.trim();
+  if (!code) return;
+  $("joinjob").disabled = true; $("joinjob").textContent = "Joining…";
+  try {
+    const jobId = await db.joinByCode(code);
+    if (!jobId) { alert("No assessment found with that code. Check the code and try again."); return; }
+    $("joincode").value = "";
+    openJob(jobId);
+  } catch (err) { alert("Could not join: " + err.message); }
+  finally { $("joinjob").disabled = false; $("joinjob").textContent = "Join"; }
+};
+
+$("copycode").onclick = () => {
+  const code = $("sharecode").textContent;
+  if (!code) return;
+  navigator.clipboard.writeText(code).then(() => { $("status").textContent = "Share code copied!"; }).catch(() => {});
+};
 
 async function load() { items = await db.jobItems(job.id); renderItems(); }
 
@@ -178,7 +202,7 @@ function renderItems() {
   $("title").textContent = job.name;
   $("edname").value = job.name || ""; $("edaddr1").value = job.address1 || ""; $("edaddr2").value = job.address2 || "";
   const mine = items.filter(i => sectionOf(i) === current);
-  const p = mine.filter(i => i.photo).length, n = mine.filter(i => !i.photo).length;
+  const p = mine.filter(i => i.photo || i.photoUrl).length, n = mine.filter(i => !i.photo && !i.photoUrl).length;
   $("counts").textContent = `This section: ${p} photo${p === 1 ? "" : "s"}, ${n} note${n === 1 ? "" : "s"}. Total: ${items.length} items.`;
 
   const only = $("onlyhere").checked;
@@ -186,10 +210,15 @@ function renderItems() {
   $("items").replaceChildren(...list.map(it => {
     const d = document.createElement("div"); d.className = "item";
     const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = sectionLabel(sectionOf(it)) + (it.photo ? "" : "  |  " + noteTag(it)); d.append(tag);
-    if (it.photo) {
+    if (it.photo || it.photoUrl) {
       const img = document.createElement("img");
-      const photoBlob = it.photo instanceof Blob ? it.photo : new Blob([it.photo], { type: "image/jpeg" });
-      const u = URL.createObjectURL(photoBlob); urls.push(u); img.src = u; d.append(img);
+      if (it.photoUrl) {
+        img.src = it.photoUrl;
+      } else {
+        const photoBlob = it.photo instanceof Blob ? it.photo : new Blob([it.photo], { type: "image/jpeg" });
+        const u = URL.createObjectURL(photoBlob); urls.push(u); img.src = u;
+      }
+      d.append(img);
       const cap = document.createElement("input"); cap.type = "text"; cap.value = it.caption || "";
       cap.placeholder = `Caption (blank = "${sectionOf(it) === "photo" ? "View of the property" : "View of " + sectionTitle(sectionOf(it)).toLowerCase()}")`;
       cap.onchange = async () => { it.caption = cap.value; await db.putItem(it); report = null; $("saveReport").hidden = true; };
@@ -201,7 +230,7 @@ function renderItems() {
     const move = document.createElement("select");
     move.append(new Option("Move to…", ""));
     SECTIONS.forEach(s => move.append(new Option(sectionLabel(s.id), s.id)));
-    move.onchange = async () => { if (move.value) { it.sectionId = move.value; await db.putItem(it); report = null; $("saveReport").hidden = true; await load(); } };
+    move.onchange = async () => { if (move.value) { it.sectionId = move.value; await db.putItem(it); dirty(); } };
     if (!it.photo) {
       const kind = document.createElement("select");
       kind.append(new Option("Change type…", ""));
@@ -209,12 +238,12 @@ function renderItems() {
         .forEach(([t, name]) => kind.append(new Option(name, t)));
       kind.onchange = async () => {
         if (!kind.value) return;
-        it.noteType = kind.value; await db.putItem(it); dirty(); await load();
+        it.noteType = kind.value; await db.putItem(it); dirty();
       };
       tools.append(kind);
     }
     const del = document.createElement("button"); del.className = "alt small"; del.textContent = "Delete";
-    del.onclick = async () => { if (confirm("Delete this item?")) { await db.deleteItem(it.id); report = null; $("saveReport").hidden = true; await load(); } };
+    del.onclick = async () => { if (confirm("Delete this item?")) { await db.deleteItem(it); dirty(); } };
     tools.append(move, del); d.append(tools);
     return d;
   }));
@@ -243,11 +272,11 @@ $("cam").onchange = async e => {
   $("status").textContent = "Saving photo…";
   try {
     const { blob, w, h } = await shrink(f);
-    // Store as Uint8Array so Safari can read it back after the IDB transaction closes.
-    const photo = new Uint8Array(await blob.arrayBuffer());
-    await db.putItem({ id: db.uid(), jobId: job.id, ts: Date.now(), kind: "photo", sectionId: current, caption: "", transcript: "", photo, w, h });
+    const id = db.uid();
+    const photoUrl = await db.uploadPhoto(job.id, id, blob);
+    await db.putItem({ id, jobId: job.id, ts: Date.now(), kind: "photo", sectionId: current, caption: "", transcript: "", photoUrl, w, h });
     $("status").textContent = "Photo saved to " + sectionTitle(current) + ".";
-    dirty(); await load();
+    dirty();
   } catch (err) { $("status").textContent = "Photo NOT saved: " + err.message + " (take it again)"; }
 };
 
@@ -334,7 +363,7 @@ $("split").onclick = async () => {
       resetNoteBox();
       $("status").textContent = `${saved} note${saved === 1 ? "" : "s"} saved.`;
       $("text").focus();
-      dirty(); await load();
+      dirty();
     };
     preview.append(saveAll);
     preview.hidden = false;
@@ -358,7 +387,7 @@ $("savenote").onclick = async () => {
     resetNoteBox();
     $("status").textContent = "Note saved."; // box stays open for next note; Close hides it
     $("text").focus();
-    dirty(); await load();
+    dirty();
   } catch (err) { $("status").textContent = "Note NOT saved: " + err.message + " (your text is still here)"; }
 };
 
@@ -395,13 +424,20 @@ $("saveReport").onclick = async () => {
 const toDataUrl = blob => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(blob); });
 const photoToDataUrl = async p => {
   if (!p) return null;
+  if (typeof p === "string") {
+    // URL from Firebase Storage — fetch and convert to data URL
+    try { const res = await fetch(p); return toDataUrl(await res.blob()); } catch { return null; }
+  }
   const blob = p instanceof Blob ? p : new Blob([p], { type: "image/jpeg" });
   return toDataUrl(blob);
 };
 
 $("backup").onclick = async () => {
   const out = { version: 1, job, items: [] };
-  for (const it of items) out.items.push({ ...it, photo: await photoToDataUrl(it.photo) });
+  for (const it of items) {
+    const photo = it.photoUrl ? await photoToDataUrl(it.photoUrl) : await photoToDataUrl(it.photo);
+    out.items.push({ ...it, photo, photoUrl: undefined });
+  }
   const file = new File([JSON.stringify(out)], `PCA-backup-${job.name.replace(/[^\w-]+/g, "_")}.json`, { type: "application/json" });
   try {
     if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file] });
@@ -414,10 +450,16 @@ $("restore").onchange = async e => {
   if (!f) return;
   try {
     const data = JSON.parse(await f.text());
+    if (!data.job.shareCode) data.job.shareCode = Math.random().toString(36).slice(2, 8).toUpperCase();
     await db.putJob(data.job);
     for (const it of data.items) {
-      const photo = it.photo ? new Uint8Array(await (await fetch(it.photo)).arrayBuffer()) : null;
-      await db.putItem({ ...it, photo });
+      let photoUrl = it.photoUrl || null;
+      if (!photoUrl && it.photo) {
+        const bytes = new Uint8Array(await (await fetch(it.photo)).arrayBuffer());
+        const blob = new Blob([bytes], { type: "image/jpeg" });
+        photoUrl = await db.uploadPhoto(data.job.id, it.id, blob);
+      }
+      await db.putItem({ ...it, photo: null, photoUrl });
     }
     openJob(data.job.id);
   } catch (err) { alert("Could not restore that file: " + err.message); }
@@ -618,12 +660,12 @@ $("genhvac").onclick = async () => {
   if (condText) { await db.putItem({ id: db.uid(), jobId: job.id, ts: stamp+1, kind: "note", sectionId: "5.2", caption: "", transcript: condText, photo: null, noteType: "condition" }); saved++; }
   if (recText) { await db.putItem({ id: db.uid(), jobId: job.id, ts: stamp+2, kind: "note", sectionId: "5.2", caption: "", transcript: recText, photo: null, noteType: "rec", tier: "long" }); saved++; }
   $("status").textContent = `Generated ${saved} HVAC note${saved===1?"":"s"}.`;
-  dirty(); await load();
+  dirty();
 };
 
 // ---------- start ----------
 // Shown under More so you can tell which build the phone is running. Keep in step with CACHE in sw.js.
-const VERSION = "v25: incomplete boilerplate … marker system, topography fix, GitHub Pages deploy";
+const VERSION = "v26: Firebase real-time sync, multi-user support via share code";
 $("version").textContent = "App version: " + VERSION;
 
 async function init() {

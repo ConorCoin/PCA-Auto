@@ -101,7 +101,7 @@ export async function buildReport(job, items) {
 
   // Appendix A: photo log in report section order (general views first), then the order taken within a section.
   const photos = items
-    .filter(i => i.photo)
+    .filter(i => i.photoUrl || i.photo)
     .sort((a, b) => sectionOrder(sectionOf(a)) - sectionOrder(sectionOf(b)) || a.ts - b.ts);
   const photoLog = [R.appendixHead("A", "Photographic Log")];
   if (!photos.length) photoLog.push(new Paragraph({ text: "No photographs were taken." }));
@@ -109,7 +109,13 @@ export async function buildReport(job, items) {
   for (const it of photos) {
     no += 1;
     const caption = it.caption || (sectionOf(it) === "photo" ? "View of the property" : `View of ${sectionTitle(sectionOf(it)).toLowerCase()}`);
-    const raw = it.photo instanceof Uint8Array ? it.photo : new Uint8Array(await it.photo.arrayBuffer());
+    let raw;
+    if (it.photoUrl) {
+      const res = await fetch(it.photoUrl);
+      raw = new Uint8Array(await res.arrayBuffer());
+    } else {
+      raw = it.photo instanceof Uint8Array ? it.photo : new Uint8Array(await it.photo.arrayBuffer());
+    }
     const bytes = await normalizePhoto(raw);
     photoLog.push(photoBlock(no, caption, bytes, job, logo));
     photoLog.push(new Paragraph({ spacing: { after: 160 } }));
