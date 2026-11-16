@@ -48,8 +48,9 @@ export async function jobItems(jobId) {
 
 export async function putItem(item) {
   await authReady;
-  // Strip Uint8Array photo bytes — photos live in Storage, referenced by photoUrl.
-  const { photo, ...clean } = item;
+  // Strip photo bytes (live in Storage) and any undefined fields (Firestore rejects them).
+  const { photo, ...rest } = item;
+  const clean = Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined));
   await setDoc(itemDoc(clean.jobId, clean.id), clean);
 }
 
