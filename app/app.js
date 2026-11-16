@@ -300,6 +300,7 @@ function resetNoteBox() {
   $("text").value = "";
   $("splitpreview").hidden = true;
   $("undo").hidden = true;
+  $("savenote").hidden = false;
   noteType = "description"; recTier = "short"; preAiText = "";
 }
 
@@ -315,6 +316,7 @@ $("undo").onclick = () => {
   $("text").value = preAiText;
   $("splitpreview").hidden = true;
   $("undo").hidden = true;
+  $("savenote").hidden = false;
   preAiText = "";
 };
 
@@ -368,6 +370,7 @@ $("split").onclick = async () => {
     preview.append(saveAll);
     preview.hidden = false;
     $("undo").hidden = false;
+    $("savenote").hidden = true;
   } catch (err) {
     $("status").textContent = err.message === "no-key"
       ? "No API key — add one in More → AI."
